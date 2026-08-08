@@ -298,15 +298,11 @@ export default function ProductActions({ product, onVariantChange }) {
             <span>Você escolhe a data prevista da sua viagem no checkout.</span>
           </li>
           <li className="flex items-start gap-2.5">
-            <i className="fas fa-passport text-gray-400 mt-0.5"></i>
-            <span>Leve passaporte e passagem aérea no momento da retirada.</span>
-          </li>
-          <li className="flex items-start gap-2.5">
             <i className="fas fa-hand-holding text-gray-400 mt-0.5"></i>
             <span>Retirada pessoal em Orlando — não há entrega no Brasil.</span>
           </li>
           <li className="flex items-start gap-2.5">
-            <i className="fas fa-shield-alt text-gray-400 mt-0.5"></i>
+            <i className="fas fa-shield-halved text-gray-400 mt-0.5"></i>
             <span>Aparelho original Apple com garantia internacional.</span>
           </li>
         </ul>

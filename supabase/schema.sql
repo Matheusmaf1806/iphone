@@ -10,6 +10,7 @@
 --   2. supabase/migrations/add_pickup_info_to_orders.sql
 --   3. supabase/migrations/add_product_variant_system.sql
 --   4. supabase/migrations/add_currency_and_import_tax.sql
+--   5. supabase/migrations/add_variant_multi_images.sql
 --
 -- IMPORTANTE — leia antes de rodar:
 -- 1. Toda tabela tem RLS habilitado com uma policy permissiva ("allow all").
@@ -294,7 +295,8 @@ create table if not exists product_variants (
   height numeric,
   width numeric,
   depth numeric,
-  image_url text,
+  image_url text,                                 -- legado, mantido como fallback da 1ª foto
+  image_urls jsonb not null default '[]'::jsonb,  -- até 4 fotos do SKU
   is_default boolean not null default false,      -- variante pré-selecionada na página do produto
   is_active boolean default true,
   created_at timestamptz default now(),

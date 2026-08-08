@@ -68,6 +68,7 @@ export async function POST(request) {
         width,
         depth,
         image_url,
+        image_urls,
         is_default,
         is_active,
       } = row;
@@ -91,7 +92,8 @@ export async function POST(request) {
         height: height || null,
         width: width || null,
         depth: depth || null,
-        image_url: image_url || null,
+        image_url: image_url || (image_urls && image_urls[0]) || null,
+        image_urls: image_urls || [],
         is_default: is_default || false,
         is_active: is_active !== undefined ? is_active : true,
       };

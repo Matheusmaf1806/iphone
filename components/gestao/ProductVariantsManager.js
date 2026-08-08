@@ -3,6 +3,8 @@ import { useState, useEffect, useMemo } from 'react';
 import Loader from '../Loader';
 import { resolveCostPriceBRL } from '../../lib/pricing';
 
+const MAX_VARIANT_IMAGES = 4;
+
 // Gera um sufixo de SKU legível a partir dos valores do atributo, ex: {"Cor":"Titânio Azul","Armazenamento":"256GB"} -> "TITAZU-256GB"
 function suggestSkuSuffix(attributes) {
   return Object.values(attributes)
@@ -103,7 +105,7 @@ export default function ProductVariantsManager({ productId, productName, product
         stock_quantity: v.stock_quantity ?? 0,
         low_stock_threshold: v.low_stock_threshold ?? 10,
         sku: v.sku || '',
-        image_url: v.image_url || '',
+        image_urls: (v.image_urls && v.image_urls.length > 0) ? v.image_urls : (v.image_url ? [v.image_url] : []),
         is_default: v.is_default || false,
         is_active: v.is_active !== false,
       })));
@@ -223,7 +225,7 @@ export default function ProductVariantsManager({ productId, productName, product
         stock_quantity: 0,
         low_stock_threshold: 10,
         sku: `${(productSku || productName || 'SKU').toString().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10)}-${suggestSkuSuffix(combo)}`,
-        image_url: '',
+        image_urls: [],
         is_default: false,
         is_active: true,
       }));
@@ -290,13 +292,21 @@ export default function ProductVariantsManager({ productId, productName, product
       const res = await fetch('/api/upload', { method: 'POST', body: fd });
       const data = await res.json();
       if (data.success) {
-        updateRow(key, 'image_url', data.url);
+        setRows(prev => prev.map(r => (
+          r._key === key ? { ...r, image_urls: [...(r.image_urls || []), data.url].slice(0, MAX_VARIANT_IMAGES) } : r
+        )));
       } else {
         alert(data.error || 'Erro ao enviar imagem');
       }
     } catch (err) {
       alert('Erro ao enviar imagem');
     }
+  };
+
+  const removeVariantImage = (key, index) => {
+    setRows(prev => prev.map(r => (
+      r._key === key ? { ...r, image_urls: r.image_urls.filter((_, i) => i !== index) } : r
+    )));
   };
 
   const handleSaveAll = async () => {
@@ -325,7 +335,7 @@ export default function ProductVariantsManager({ productId, productName, product
           supplier_margin_percentage: r.supplier_margin_percentage ? parseFloat(r.supplier_margin_percentage) : null,
           stock_quantity: parseInt(r.stock_quantity) || 0,
           low_stock_threshold: parseInt(r.low_stock_threshold) || 10,
-          image_url: r.image_url || null,
+          image_urls: r.image_urls || [],
           is_default: r.is_default,
           is_active: r.is_active,
         })),
@@ -517,7 +527,7 @@ export default function ProductVariantsManager({ productId, productName, product
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Imposto (%)</th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Margem (%)</th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Estoque</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Foto</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fotos (até {MAX_VARIANT_IMAGES})</th>
                       <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Padrão</th>
                       <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Ativo</th>
                       <th className="px-3 py-2"></th>
@@ -556,12 +566,26 @@ export default function ProductVariantsManager({ productId, productName, product
                           <input type="number" min="0" value={row.stock_quantity} onChange={(e) => updateRow(row._key, 'stock_quantity', e.target.value)} className="w-20 px-2 py-1 border rounded" />
                         </td>
                         <td className="px-3 py-2">
-                          <div className="flex items-center gap-1">
-                            {row.image_url && <img src={row.image_url} alt="" className="w-8 h-8 rounded object-cover border" />}
-                            <label className="text-xs text-blue-600 hover:underline cursor-pointer">
-                              {row.image_url ? 'Trocar' : 'Upload'}
-                              <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleImageUpload(row._key, e.target.files[0])} />
-                            </label>
+                          <div className="flex items-center gap-1 flex-wrap w-32">
+                            {(row.image_urls || []).map((url, idx) => (
+                              <div key={idx} className="relative group">
+                                <img src={url} alt="" className="w-8 h-8 rounded object-cover border" />
+                                <button
+                                  type="button"
+                                  onClick={() => removeVariantImage(row._key, idx)}
+                                  className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] leading-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  title="Remover foto"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                            {(row.image_urls || []).length < MAX_VARIANT_IMAGES && (
+                              <label className="w-8 h-8 rounded border border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-blue-400 hover:text-blue-500 cursor-pointer text-lg leading-none">
+                                +
+                                <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleImageUpload(row._key, e.target.files[0])} />
+                              </label>
+                            )}
                           </div>
                         </td>
                         <td className="px-3 py-2 text-center">
