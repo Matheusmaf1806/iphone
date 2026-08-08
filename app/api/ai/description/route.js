@@ -1,20 +1,17 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '../../../../lib/auth';
+import { SITE_NAME } from '../../../../lib/siteConfig';
 
 export const dynamic = 'force-dynamic';
 
 const CATEGORY_KEYWORDS = {
-  racoes: 'nutrição completa, palatabilidade, proteínas, vitaminas, minerais, digestibilidade, ração para cães, ração para gatos, saúde do pet',
-  petiscos: 'snack natural, petisco para adestramento, recompensa, sem conservantes, ingredientes naturais, tira-gosto saudável',
-  brinquedos: 'brinquedo interativo, estimulação mental, resistente, não tóxico, entretenimento, enriquecimento ambiental',
-  coleiras: 'coleira ajustável, segura, resistente, passear com pet, identificação, nylon, couro, conforto no pescoço',
-  guias: 'guia retrátil, passeio seguro, controle do pet, resistente, ergonômica, cão na coleira',
-  passeio: 'acessório para passeio, segurança, controle, conforto, mobilidade com pet',
-  acessorios: 'acessório pet, qualidade, durabilidade, prático, estilo, conforto para o animal',
-  'higiene-e-saude': 'higiene pet, saúde animal, banho, grooming, cuidados veterinários, prevenção',
-  'camas-e-casas': 'cama para cachorro, casa para gato, conforto, descanso, segurança, lavável, pelúcia',
-  farmacia: 'saúde animal, prevenção, tratamento, veterinário, bem-estar, remédio pet',
-  limpeza: 'limpeza segura para pets, sem produtos tóxicos, higiene do lar com animais',
+  iphone: 'iPhone original Apple, tela Super Retina XDR, câmera avançada, chip A-series, 5G, garantia internacional, parcelamento sem juros',
+  mac: 'MacBook, iMac, Mac mini, chip Apple Silicon, desempenho, autonomia de bateria, macOS, produtividade',
+  ipad: 'iPad, tela Liquid Retina, compatível com Apple Pencil, portabilidade, produtividade, entretenimento',
+  'apple-watch': 'Apple Watch, monitoramento de saúde, GPS, resistente à água, integração com iPhone, pulseiras',
+  airpods: 'AirPods, cancelamento de ruído, áudio espacial, estojo com carregamento, pareamento automático com dispositivos Apple',
+  acessorios: 'acessório original Apple, carregador, cabo, capinha, película, compatibilidade garantida',
+  seminovos: 'iPhone seminovo, aparelho vistoriado, saúde da bateria, garantia, procedência, economia real',
 };
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
@@ -111,7 +108,7 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Nenhuma chave de IA configurada (GEMINI_API_KEY ou GROQ_API_KEY)' }, { status: 500 });
     }
 
-    const categoryKeywords = CATEGORY_KEYWORDS[category] || 'pet, animal de estimação, qualidade, segurança, conforto';
+    const categoryKeywords = CATEGORY_KEYWORDS[category] || 'produto Apple original, qualidade, garantia, segurança';
     const skuLabel = sku ? `SKU: ${sku}` : '';
 
     // Build technical details block from available product data
@@ -134,33 +131,33 @@ export async function POST(request) {
       ? `\nDescrição atual (melhore e expanda com mais detalhes se necessário):\n"${existingDesc.trim()}"\n`
       : '';
 
-    const systemInstruction = `Você é um especialista em copywriting, SEO e GEO (Generative Engine Optimization) para e-commerce de pet shop brasileiro chamado BrandPet.
+    const systemInstruction = `Você é um especialista em copywriting, SEO e GEO (Generative Engine Optimization) para e-commerce de produtos Apple/iPhone brasileiro chamado ${SITE_NAME}, especializado em iPhone e produtos Apple parcelados com retirada pessoal em Orlando.
 
 Seu trabalho é criar descrições que:
 1. Ranqueiam bem no Google com palavras-chave relevantes e densidade natural
-2. São otimizadas para respostas de IA (perguntas como "qual melhor ração para cachorro?")
-3. Convertem visitantes em compradores com linguagem persuasiva e empática
-4. Transmitem confiança e especialidade — como um veterinário que também é amigo do tutor
+2. São otimizadas para respostas de IA (perguntas como "qual iPhone tem melhor custo-benefício?")
+3. Convertem visitantes em compradores com linguagem persuasiva e direta
+4. Transmitem confiança e especialidade técnica sobre produtos Apple
 
 Regras absolutas:
 - Escreva em português brasileiro fluente e natural
 - NUNCA use asteriscos, markdown, bullet points ou listas no texto corrido
-- NUNCA invente especificações técnicas que não existam no produto
+- NUNCA invente especificações técnicas que não existam no produto (capacidade, cor, chip, condição)
 - Retorne SOMENTE o JSON solicitado, sem texto fora do JSON
 - CRÍTICO para JSON válido: dentro dos valores de string, use \\n para separar parágrafos e NUNCA insira quebras de linha literais (Enter) — o JSON deve ser uma única linha contínua sem quebras dentro dos valores`;
 
-    const userPrompt = `Pesquise o produto na web para encontrar informações reais e detalhadas (composição, ingredientes, fabricante, indicações de uso, diferenciais, tamanhos disponíveis, para qual porte/raça/espécie é indicado) e crie o conteúdo abaixo.
+    const userPrompt = `Pesquise o produto na web para encontrar informações reais e detalhadas (especificações técnicas, capacidades disponíveis, cores, diferenciais em relação a modelos anteriores, para qual perfil de uso é indicado) e crie o conteúdo abaixo.
 
 Produto: ${name}
-Categoria: ${category || 'pet'}
+Categoria: ${category || 'produto Apple'}
 ${skuLabel}
 Keywords prioritárias: ${categoryKeywords}
 ${technicalBlock}${existingContext}
 
-IMPORTANTE: A descrição deve ser RICA em detalhes específicos do produto — composição real, ingredientes, peso, tamanho, para qual animal é indicado, modo de uso, diferenciais da marca. Não seja genérico.
+IMPORTANTE: A descrição deve ser RICA em detalhes específicos do produto — especificações reais, capacidade, cor, condição (novo/seminovo), diferenciais técnicos, para qual perfil de uso é indicado. Não seja genérico.
 
 Retorne exatamente este JSON minificado (sem markdown, sem quebras de linha fora das strings, sem espaços extras):
-{"description":"Descrição completa com 3 parágrafos fluidos (220-320 palavras), separados por \\n\\n dentro da string. Estrutura obrigatória: [1º parágrafo: o que é o produto, para qual animal/porte/fase é indicado e seu principal diferencial] [2º parágrafo: detalhes reais — ingredientes/composição/material/tecnologia, benefícios concretos e mensuráveis para o pet, como usar] [3º parágrafo: vantagens para o tutor — praticidade, confiança, custo-benefício — e chamada para ação sutil]. Use as keywords naturalmente. SEM markdown. Tom: especialista caloroso e confiável.","short_description":"Uma frase de impacto com até 30 palavras que inclua o diferencial principal, para qual animal é indicado e o benefício mais importante.","meta_title":"Título SEO com até 60 caracteres. Formato: [Nome do Produto] - [Benefício Principal] | BrandPet","meta_description":"Meta description com 140-155 caracteres. Inclua keyword principal, para qual animal é, benefício e call-to-action."}`;
+{"description":"Descrição completa com 3 parágrafos fluidos (220-320 palavras), separados por \\n\\n dentro da string. Estrutura obrigatória: [1º parágrafo: o que é o produto, para qual perfil de uso é indicado e seu principal diferencial] [2º parágrafo: detalhes reais — especificações técnicas, materiais, tecnologia, benefícios concretos e mensuráveis, como usar] [3º parágrafo: vantagens para o comprador — parcelamento, originalidade, garantia, custo-benefício — e chamada para ação sutil]. Use as keywords naturalmente. SEM markdown. Tom: especialista confiável e direto.","short_description":"Uma frase de impacto com até 30 palavras que inclua o diferencial principal e o benefício mais importante.","meta_title":"Título SEO com até 60 caracteres. Formato: [Nome do Produto] - [Benefício Principal] | ${SITE_NAME}","meta_description":"Meta description com 140-155 caracteres. Inclua keyword principal, diferencial, benefício e call-to-action."}`;
 
     const geminiKey = process.env.GEMINI_API_KEY;
     const groqKey = process.env.GROQ_API_KEY;

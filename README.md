@@ -155,7 +155,7 @@ O schema SQL cria um usuário admin padrão:
 
 ```
 Username: admin
-Email: admin@folhadeguine.com
+Email: admin@example.com
 Senha: admin123
 ```
 

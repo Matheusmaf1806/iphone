@@ -421,17 +421,13 @@ export default function ProductModal({ product, onClose, onSave }) {
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all"
                     >
                       <option value="">Selecione uma categoria</option>
-                      <option value="racoes">Rações</option>
-                      <option value="brinquedos">Brinquedos</option>
+                      <option value="iphone">iPhone</option>
+                      <option value="mac">Mac</option>
+                      <option value="ipad">iPad</option>
+                      <option value="apple-watch">Apple Watch</option>
+                      <option value="airpods">AirPods</option>
                       <option value="acessorios">Acessórios</option>
-                      <option value="higiene-e-saude">Higiene e Saúde</option>
-                      <option value="camas-e-casas">Camas e Casas</option>
-                      <option value="passeio">Passeio</option>
-                      <option value="coleiras">Coleiras</option>
-                      <option value="guias">Guias</option>
-                      <option value="petiscos">Petiscos</option>
-                      <option value="farmacia">Farmácia</option>
-                      <option value="limpeza">Limpeza</option>
+                      <option value="seminovos">Seminovos</option>
                       <option value="outros">Outros</option>
                     </select>
                   </div>

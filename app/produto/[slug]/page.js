@@ -13,17 +13,14 @@ import { calculateAllPrices } from '../../../lib/pricing';
 
 // Category display names
 const CATEGORY_NAMES = {
-  'racoes': 'Rações',
-  'brinquedos': 'Brinquedos',
+  'iphone': 'iPhone',
+  'mac': 'Mac',
+  'ipad': 'iPad',
+  'apple-watch': 'Apple Watch',
+  'airpods': 'AirPods',
   'acessorios': 'Acessórios',
-  'higiene-e-saude': 'Higiene e Saúde',
-  'camas-e-casas': 'Camas e Casas',
-  'passeio': 'Passeio',
-  'coleiras': 'Coleiras',
-  'guias': 'Guias',
-  'petiscos': 'Petiscos',
-  'farmacia': 'Farmácia',
-  'limpeza': 'Limpeza',
+  'seminovos': 'Seminovos',
+  'promocoes': 'Promoções',
 };
 
 function applyPrices(product, affiliate, config) {
