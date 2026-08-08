@@ -217,11 +217,6 @@ export default function CartDrawer() {
                         <i className="fas fa-trash-alt text-xs"></i>
                       </button>
                     </div>
-                    {item.attributes && Object.keys(item.attributes).length > 0 && (
-                      <p className="text-[10px] text-gray-500 -mt-1 mb-1 truncate">
-                        {Object.entries(item.attributes).map(([k, v]) => `${k}: ${v}`).join(' · ')}
-                      </p>
-                    )}
 
                     {/* Price e Quantity na mesma linha */}
                     <div className="flex items-center justify-between mt-2">

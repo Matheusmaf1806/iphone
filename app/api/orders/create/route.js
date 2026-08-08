@@ -165,7 +165,11 @@ export async function POST(request) {
         product_variant_id: variant?.id || null,
         variant_attributes: variant?.attributes || null,
         variant_sku: variant?.sku || null,
-        product_name: product.name,
+        // Nome gravado no pedido já inclui a combinação comprada (cor/armazenamento/
+        // versão) — nunca só "iPhone 17 Pro" sem dizer qual SKU foi vendido.
+        product_name: variant?.attributes && Object.keys(variant.attributes).length > 0
+          ? `${product.name} — ${Object.values(variant.attributes).join(', ')}`
+          : product.name,
         quantity: item.quantity,
         cost_price: prices.costPrice,
         exchange_rate_used: costCurrency === 'USD' ? config.usdBrlRate : null,

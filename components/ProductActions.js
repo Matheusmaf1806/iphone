@@ -77,6 +77,10 @@ export default function ProductActions({ product, onVariantChange }) {
     hasVariants
       ? {
           ...product,
+          // O nome já sai com a combinação escolhida (ex: "iPhone 17 Pro Max — Titânio
+          // Azul, 256GB") — assim carrinho, checkout e pedido nunca mostram só o nome
+          // genérico do produto sem dizer qual SKU foi comprado.
+          name: `${product.name} — ${Object.values(selectedVariant.attributes).join(', ')}`,
           price: selectedVariant.pixPrice,
           pixPrice: selectedVariant.pixPrice,
           cardPrice: selectedVariant.cardPrice,

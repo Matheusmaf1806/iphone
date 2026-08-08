@@ -241,11 +241,6 @@ export default function AffiliateSales({ session }) {
                           />
                           <div className="flex-1">
                             <p className="font-semibold text-gray-900">{item.productName}</p>
-                            {item.variantAttributes && Object.keys(item.variantAttributes).length > 0 && (
-                              <p className="text-xs text-gray-500">
-                                {Object.entries(item.variantAttributes).map(([k, v]) => `${k}: ${v}`).join(' · ')}
-                              </p>
-                            )}
                             <p className="text-sm text-gray-600">Quantidade: {item.quantity}</p>
                           </div>
                           <div className="text-right">
