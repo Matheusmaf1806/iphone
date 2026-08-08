@@ -11,11 +11,11 @@ export default function FeaturesBar() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl mx-auto">
           <div className="flex items-center gap-3 bg-gray-50 rounded-2xl p-4">
             <div className="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: brandColor }}>
-              <i className="fas fa-truck-fast text-lg text-white"></i>
+              <i className="fas fa-plane-departure text-lg text-white"></i>
             </div>
             <div className="text-left">
-              <p className="font-bold text-gray-900 text-sm">Frete Grátis</p>
-              <p className="text-xs text-gray-600">Acima de R$ 199</p>
+              <p className="font-bold text-gray-900 text-sm">Retirada em Orlando</p>
+              <p className="text-xs text-gray-600">Você mesmo retira na viagem</p>
             </div>
           </div>
 
@@ -34,8 +34,8 @@ export default function FeaturesBar() {
               <i className="fas fa-medal text-lg text-white"></i>
             </div>
             <div className="text-left">
-              <p className="font-bold text-gray-900 text-sm">Qualidade</p>
-              <p className="text-xs text-gray-600">Marcas selecionadas para pets</p>
+              <p className="font-bold text-gray-900 text-sm">100% Original</p>
+              <p className="text-xs text-gray-600">Lacrado, com nota fiscal americana</p>
             </div>
           </div>
 
@@ -45,7 +45,7 @@ export default function FeaturesBar() {
             </div>
             <div className="text-left">
               <p className="font-bold text-gray-900 text-sm">Parcele em até</p>
-              <p className="text-xs text-gray-600">10x sem juros</p>
+              <p className="text-xs text-gray-600">21x sem juros</p>
             </div>
           </div>
         </div>

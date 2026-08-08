@@ -9,28 +9,28 @@ const testimonials = [
     location: 'São Paulo, SP',
     image: 'https://i.pravatar.cc/150?img=5',
     rating: 5,
-    text: 'Meu Golden adora a ração que compro aqui! Qualidade premium e entrega super rápida. O pelo dele nunca esteve tão bonito!',
+    text: 'Parcelei meu iPhone em reais e retirei tudo certinho em Orlando na minha viagem de férias. Processo super organizado, recomendo!',
   },
   {
     name: 'João Santos',
     location: 'Rio de Janeiro, RJ',
     image: 'https://i.pravatar.cc/150?img=12',
     rating: 5,
-    text: 'Comprei uma caminha para minha gatinha e ela amou! Produto de qualidade, veio bem embalado e chegou antes do prazo. Recomendo!',
+    text: 'Comprei o iPhone pra mim e o Apple Watch pra minha esposa. Preço muito melhor que no Brasil e a retirada foi tranquila.',
   },
   {
     name: 'Ana Paula',
     location: 'Belo Horizonte, MG',
     image: 'https://i.pravatar.cc/150?img=9',
     rating: 5,
-    text: 'Melhor pet shop online! Encontro tudo que preciso para meus 3 cães e 2 gatos. Preços justos e variedade enorme. Virei cliente fiel!',
+    text: 'Já é a segunda vez que compro assim. Parcelamento sem juros, aparelho lacrado, com nota fiscal americana. Virei cliente fiel!',
   },
   {
     name: 'Carlos Oliveira',
     location: 'Salvador, BA',
     image: 'https://i.pravatar.cc/150?img=13',
     rating: 5,
-    text: 'O kit de banho que comprei deixou meu Shih Tzu cheiroso por dias! Produtos de qualidade e atendimento nota 10. Super indico!',
+    text: 'Fiquei com receio no início, mas me explicaram tudo sobre a retirada e a cota de bagagem antes da viagem. Atendimento nota 10!',
   },
 ];
 
@@ -54,7 +54,7 @@ export default function TestimonialsSection() {
             O Que Nossos Clientes Dizem
           </h2>
           <p className="text-gray-600 text-lg">
-            Milhares de pets felizes e donos satisfeitos em todo o Brasil
+            Milhares de brasileiros já retiraram seu iPhone em Orlando
           </p>
         </div>
 
@@ -79,7 +79,7 @@ export default function TestimonialsSection() {
 
               <div className="flex gap-1 mb-3">
                 {[...Array(testimonial.rating)].map((_, i) => (
-                  <i key={i} className="fas fa-star" style={{ color: affiliate.buttonColor || '#f60c49' }}></i>
+                  <i key={i} className="fas fa-star" style={{ color: affiliate.buttonColor || '#0043f7' }}></i>
                 ))}
               </div>
 
@@ -92,7 +92,7 @@ export default function TestimonialsSection() {
 
         {/* Mobile: Carousel */}
         <div className="md:hidden relative">
-          <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-6 shadow-xl border-2" style={{ borderColor: affiliate.buttonColor || '#f60c49' }}>
+          <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-6 shadow-xl border-2" style={{ borderColor: affiliate.buttonColor || '#0043f7' }}>
             <div className="flex items-center gap-4 mb-4">
               <img
                 src={testimonials[current].image}
@@ -111,7 +111,7 @@ export default function TestimonialsSection() {
 
             <div className="flex gap-1 mb-3">
               {[...Array(testimonials[current].rating)].map((_, i) => (
-                <i key={i} className="fas fa-star" style={{ color: affiliate.buttonColor || '#f60c49' }}></i>
+                <i key={i} className="fas fa-star" style={{ color: affiliate.buttonColor || '#0043f7' }}></i>
               ))}
             </div>
 
@@ -125,14 +125,14 @@ export default function TestimonialsSection() {
             <button
               onClick={prev}
               className="bg-brand-dark w-10 h-10 rounded-full flex items-center justify-center hover:opacity-90 transition-all shadow-lg"
-              style={{ color: affiliate.buttonColor || '#f60c49' }}
+              style={{ color: affiliate.buttonColor || '#0043f7' }}
             >
               <i className="fas fa-chevron-left"></i>
             </button>
             <button
               onClick={next}
               className="bg-brand-dark w-10 h-10 rounded-full flex items-center justify-center hover:opacity-90 transition-all shadow-lg"
-              style={{ color: affiliate.buttonColor || '#f60c49' }}
+              style={{ color: affiliate.buttonColor || '#0043f7' }}
             >
               <i className="fas fa-chevron-right"></i>
             </button>

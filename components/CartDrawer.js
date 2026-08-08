@@ -114,7 +114,7 @@ export default function CartDrawer() {
         <div
           className="relative p-4 overflow-hidden"
           style={{
-            background: `linear-gradient(to bottom right, ${affiliate.buttonColor || '#f60c49'}, ${affiliate.buttonHover || '#d40a3f'}, ${affiliate.buttonColor || '#f60c49'})`
+            background: `linear-gradient(to bottom right, ${affiliate.buttonColor || '#0043f7'}, ${affiliate.buttonHover || '#0036c6'}, ${affiliate.buttonColor || '#0043f7'})`
           }}
         >
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-20 animate-shimmer"></div>
@@ -123,15 +123,15 @@ export default function CartDrawer() {
               <div
                 className="w-9 h-9 rounded-full flex items-center justify-center shadow-lg"
                 style={{
-                  backgroundColor: affiliate.buttonTextColor || '#000000',
-                  color: affiliate.buttonColor || '#f60c49'
+                  backgroundColor: affiliate.buttonTextColor || '#0c0e0b',
+                  color: affiliate.buttonColor || '#0043f7'
                 }}
               >
                 <i className="fas fa-shopping-cart text-sm"></i>
               </div>
               <div>
-                <h2 className="text-lg font-bold" style={{ color: affiliate.buttonTextColor || '#000000' }}>Meu Carrinho</h2>
-                <p className="text-xs font-medium" style={{ color: affiliate.buttonTextColor || '#000000' }}>
+                <h2 className="text-lg font-bold" style={{ color: affiliate.buttonTextColor || '#0c0e0b' }}>Meu Carrinho</h2>
+                <p className="text-xs font-medium" style={{ color: affiliate.buttonTextColor || '#0c0e0b' }}>
                   {cart.length} {cart.length === 1 ? 'item' : 'itens'}
                 </p>
               </div>
@@ -139,14 +139,14 @@ export default function CartDrawer() {
             <button
               onClick={() => setIsOpen(false)}
               className="transition-all w-8 h-8 rounded-full flex items-center justify-center"
-              style={{ color: affiliate.buttonTextColor || '#000000' }}
+              style={{ color: affiliate.buttonTextColor || '#0c0e0b' }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = affiliate.buttonTextColor || '#000000';
-                e.currentTarget.style.color = affiliate.buttonColor || '#f60c49';
+                e.currentTarget.style.backgroundColor = affiliate.buttonTextColor || '#0c0e0b';
+                e.currentTarget.style.color = affiliate.buttonColor || '#0043f7';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.color = affiliate.buttonTextColor || '#000000';
+                e.currentTarget.style.color = affiliate.buttonTextColor || '#0c0e0b';
               }}
             >
               <i className="fas fa-times text-lg"></i>
@@ -169,11 +169,11 @@ export default function CartDrawer() {
                 onClick={() => setIsOpen(false)}
                 className="font-bold py-2 px-6 rounded-full transition-all transform hover:scale-105 shadow-lg text-sm"
                 style={{
-                  backgroundColor: affiliate.buttonColor || '#f60c49',
-                  color: affiliate.buttonTextColor || '#000000'
+                  backgroundColor: affiliate.buttonColor || '#0043f7',
+                  color: affiliate.buttonTextColor || '#0c0e0b'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = affiliate.buttonHover || '#d40a3f'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = affiliate.buttonColor || '#f60c49'}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = affiliate.buttonHover || '#0036c6'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = affiliate.buttonColor || '#0043f7'}
               >
                 Explorar Produtos
               </button>
@@ -185,7 +185,7 @@ export default function CartDrawer() {
                   key={item.id}
                   className="flex gap-3 p-2 bg-white rounded-lg shadow-sm hover:shadow-md transition-all border border-gray-100"
                   style={{ borderColor: 'rgb(243 244 246)' }}
-                  onMouseEnter={(e) => e.currentTarget.style.borderColor = affiliate.buttonColor || '#f60c49'}
+                  onMouseEnter={(e) => e.currentTarget.style.borderColor = affiliate.buttonColor || '#0043f7'}
                   onMouseLeave={(e) => e.currentTarget.style.borderColor = 'rgb(243 244 246)'}
                 >
                   {/* Image - Menor */}
@@ -225,7 +225,7 @@ export default function CartDrawer() {
                         <button
                           onClick={() => updateQuantity(item.id, item.quantity - 1)}
                           className="w-5 h-5 flex items-center justify-center bg-white rounded-full transition-all"
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = affiliate.buttonColor || '#f60c49'}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = affiliate.buttonColor || '#0043f7'}
                           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
                         >
                           <i className="fas fa-minus text-[8px]"></i>
@@ -237,11 +237,11 @@ export default function CartDrawer() {
                           onClick={() => updateQuantity(item.id, item.quantity + 1)}
                           className="w-5 h-5 flex items-center justify-center rounded-full transition-all"
                           style={{
-                            backgroundColor: affiliate.buttonColor || '#f60c49',
-                            color: affiliate.buttonTextColor || '#000000'
+                            backgroundColor: affiliate.buttonColor || '#0043f7',
+                            color: affiliate.buttonTextColor || '#0c0e0b'
                           }}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = affiliate.buttonHover || '#d40a3f'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = affiliate.buttonColor || '#f60c49'}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = affiliate.buttonHover || '#0036c6'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = affiliate.buttonColor || '#0043f7'}
                         >
                           <i className="fas fa-plus text-[8px]"></i>
                         </button>
@@ -249,7 +249,7 @@ export default function CartDrawer() {
 
                       {/* Price - Compacto */}
                       <div className="text-right">
-                        <p className="font-bold text-sm leading-none" style={{ color: affiliate.buttonColor || '#f60c49' }}>
+                        <p className="font-bold text-sm leading-none" style={{ color: affiliate.buttonColor || '#0043f7' }}>
                           R$ {(item.price * item.quantity).toFixed(2).replace('.', ',')}
                         </p>
                       </div>
@@ -267,7 +267,7 @@ export default function CartDrawer() {
             {/* Cupom Section - Compacto */}
             <div className="p-3 pb-2 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
               <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
-                <i className="fas fa-ticket-alt text-xs" style={{ color: affiliate.buttonColor || '#f60c49' }}></i>
+                <i className="fas fa-ticket-alt text-xs" style={{ color: affiliate.buttonColor || '#0043f7' }}></i>
                 Cupom
               </label>
 
@@ -280,18 +280,18 @@ export default function CartDrawer() {
                     onKeyPress={(e) => e.key === 'Enter' && handleApplyCoupon()}
                     placeholder="Digite aqui"
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none transition-colors text-xs font-medium uppercase"
-                    onFocus={(e) => e.target.style.borderColor = affiliate.buttonColor || '#f60c49'}
+                    onFocus={(e) => e.target.style.borderColor = affiliate.buttonColor || '#0043f7'}
                     onBlur={(e) => e.target.style.borderColor = 'rgb(209 213 219)'}
                   />
                   <button
                     onClick={handleApplyCoupon}
                     className="font-bold px-4 py-2 rounded-lg transition-all text-xs"
                     style={{
-                      backgroundColor: affiliate.buttonColor || '#f60c49',
-                      color: affiliate.buttonTextColor || '#000000'
+                      backgroundColor: affiliate.buttonColor || '#0043f7',
+                      color: affiliate.buttonTextColor || '#0c0e0b'
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = affiliate.buttonHover || '#d40a3f'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = affiliate.buttonColor || '#f60c49'}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = affiliate.buttonHover || '#0036c6'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = affiliate.buttonColor || '#0043f7'}
                   >
                     Aplicar
                   </button>
@@ -338,7 +338,7 @@ export default function CartDrawer() {
                         applyCoupon(code);
                       }}
                       className="text-[10px] bg-gray-100 px-2 py-0.5 rounded-full font-bold transition-colors"
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = affiliate.buttonColor || '#f60c49'}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = affiliate.buttonColor || '#0043f7'}
                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgb(243 244 246)'}
                     >
                       {code}
@@ -374,7 +374,7 @@ export default function CartDrawer() {
               {/* Total */}
               <div className="flex justify-between items-center pt-2 border-t border-gray-200">
                 <span className="text-base font-bold text-gray-800">Total:</span>
-                <span className="text-xl font-bold" style={{ color: affiliate.buttonColor || '#f60c49' }}>
+                <span className="text-xl font-bold" style={{ color: affiliate.buttonColor || '#0043f7' }}>
                   R$ {total.toFixed(2).replace('.', ',')}
                 </span>
               </div>
@@ -397,7 +397,7 @@ export default function CartDrawer() {
                 <button
                   onClick={handleCheckout}
                   className="w-full font-bold py-3 rounded-lg hover:shadow-xl transition-all shadow-md flex items-center justify-center gap-2 text-sm"
-                  style={{ background: 'linear-gradient(to right, #101942, #1a2560)', color: affiliate.buttonColor || '#f60c49' }}
+                  style={{ background: 'linear-gradient(to right, #0c0e0b, #1a2560)', color: affiliate.buttonColor || '#0043f7' }}
                 >
                   <i className="fas fa-check-circle"></i>
                   Finalizar Compra

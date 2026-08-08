@@ -87,7 +87,7 @@ export default function PromoSection() {
                 Ganhe 10%<br />de Desconto
               </h2>
               <p className="text-white text-opacity-90 text-lg mb-8">
-                Na sua <strong>primeira compra</strong> para o seu melhor amigo. Cadastre-se e libere o cupom agora.
+                Na sua <strong>primeira compra</strong> de iPhone ou produto Apple. Cadastre-se e libere o cupom agora.
               </p>
 
               {/* Divider */}
@@ -96,16 +96,16 @@ export default function PromoSection() {
               {/* Stats */}
               <div className="flex items-center gap-6">
                 <div>
-                  <p className="text-2xl md:text-3xl font-extrabold text-white">50k+</p>
-                  <p className="text-white text-opacity-70 text-xs uppercase tracking-wide">Pets Felizes</p>
+                  <p className="text-2xl md:text-3xl font-extrabold text-white">5k+</p>
+                  <p className="text-white text-opacity-70 text-xs uppercase tracking-wide">iPhones Entregues</p>
                 </div>
                 <div>
                   <p className="text-2xl md:text-3xl font-extrabold text-white">4.9 <span className="text-yellow-300">&#9733;</span></p>
                   <p className="text-white text-opacity-70 text-xs uppercase tracking-wide">Avaliação</p>
                 </div>
                 <div>
-                  <p className="text-2xl md:text-3xl font-extrabold text-white">15k+</p>
-                  <p className="text-white text-opacity-70 text-xs uppercase tracking-wide">Entregas</p>
+                  <p className="text-2xl md:text-3xl font-extrabold text-white">Orlando</p>
+                  <p className="text-white text-opacity-70 text-xs uppercase tracking-wide">Ponto de Retirada</p>
                 </div>
               </div>
             </div>
@@ -121,7 +121,7 @@ export default function PromoSection() {
                     </h3>
                   </div>
                   <p className="text-white text-opacity-80 text-sm mb-6">
-                    Sem spam. Apenas promoções e dicas de cuidado.
+                    Sem spam. Apenas promoções e novidades sobre datas de retirada.
                   </p>
 
                   <form onSubmit={handleSubmit} className="space-y-4">
@@ -137,7 +137,7 @@ export default function PromoSection() {
                           type="email"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          placeholder="ex: contato@seupet.com"
+                          placeholder="ex: seuemail@exemplo.com"
                           className={`w-full pl-12 pr-4 py-4 rounded-xl border-2 ${
                             errors.email ? 'border-red-400' : 'border-transparent'
                           } bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 text-sm`}

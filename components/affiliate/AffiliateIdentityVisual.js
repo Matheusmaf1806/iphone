@@ -4,15 +4,16 @@ import { useState, useEffect } from 'react';
 import AffiliateLayout from './AffiliateLayout';
 import Loader from '../Loader';
 import ImageUpload from '../shared/ImageUpload';
+import { SITE_NAME } from '../../lib/siteConfig';
 
 export default function AffiliateIdentityVisual({ session }) {
   const [logoUrl, setLogoUrl] = useState('');
   const [faviconUrl, setFaviconUrl] = useState('');
-  const [primaryColor, setPrimaryColor] = useState('#f60c49');
-  const [backgroundColor, setBackgroundColor] = useState('#ffffff');
-  const [buttonColor, setButtonColor] = useState('#f60c49');
-  const [buttonTextColor, setButtonTextColor] = useState('#101942');
-  const [buttonHover, setButtonHover] = useState('#d40a3f');
+  const [primaryColor, setPrimaryColor] = useState('#0043f7');
+  const [backgroundColor, setBackgroundColor] = useState('#ebf0f6');
+  const [buttonColor, setButtonColor] = useState('#0043f7');
+  const [buttonTextColor, setButtonTextColor] = useState('#0c0e0b');
+  const [buttonHover, setButtonHover] = useState('#0036c6');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState(null);
@@ -39,11 +40,11 @@ export default function AffiliateIdentityVisual({ session }) {
       if (result.success && result.data) {
         setLogoUrl(result.data.logoUrl || '');
         setFaviconUrl(result.data.faviconUrl || '');
-        setPrimaryColor(result.data.primaryColor || '#f60c49');
-        setBackgroundColor(result.data.backgroundColor || '#ffffff');
-        setButtonColor(result.data.buttonColor || '#f60c49');
-        setButtonTextColor(result.data.buttonTextColor || '#101942');
-        setButtonHover(result.data.buttonHover || '#d40a3f');
+        setPrimaryColor(result.data.primaryColor || '#0043f7');
+        setBackgroundColor(result.data.backgroundColor || '#ebf0f6');
+        setButtonColor(result.data.buttonColor || '#0043f7');
+        setButtonTextColor(result.data.buttonTextColor || '#0c0e0b');
+        setButtonHover(result.data.buttonHover || '#0036c6');
       } else {
         throw new Error(result.error || 'Resposta inválida da API');
       }
@@ -94,11 +95,11 @@ export default function AffiliateIdentityVisual({ session }) {
     if (confirm('Tem certeza que deseja resetar todas as configurações?')) {
       setLogoUrl('');
       setFaviconUrl('');
-      setPrimaryColor('#f60c49');
-      setBackgroundColor('#ffffff');
-      setButtonColor('#f60c49');
-      setButtonTextColor('#000000');
-      setButtonHover('#d40a3f');
+      setPrimaryColor('#0043f7');
+      setBackgroundColor('#ebf0f6');
+      setButtonColor('#0043f7');
+      setButtonTextColor('#0c0e0b');
+      setButtonHover('#0036c6');
       setMessage({ type: 'info', text: 'Configurações resetadas. Clique em "Salvar" para aplicar.' });
     }
   };
@@ -131,7 +132,7 @@ export default function AffiliateIdentityVisual({ session }) {
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-brand-yellow focus:ring-2 focus:ring-brand-yellow/20 transition-all"
-          placeholder="#f60c49"
+          placeholder="#0043f7"
           maxLength={7}
         />
 
@@ -254,11 +255,11 @@ export default function AffiliateIdentityVisual({ session }) {
               <div className="flex-shrink-0">
                 <p className="text-xs font-medium text-gray-500 mb-2">Prévia na aba:</p>
                 <div className="bg-gray-100 rounded-lg border border-gray-300 px-3 py-2 flex items-center gap-2 min-w-[180px]">
-                  <img
-                    src={faviconUrl || '/logo/brand_pet_logo_azul.png'}
-                    alt="Favicon"
-                    className="w-4 h-4 object-contain"
-                  />
+                  {faviconUrl ? (
+                    <img src={faviconUrl} alt="Favicon" className="w-4 h-4 object-contain" />
+                  ) : (
+                    <span className="w-4 h-4 rounded-sm bg-gray-800 flex-shrink-0" />
+                  )}
                   <span className="text-xs text-gray-600 truncate">Minha Loja</span>
                   <span className="text-gray-300 ml-auto text-xs">x</span>
                 </div>
@@ -269,7 +270,7 @@ export default function AffiliateIdentityVisual({ session }) {
               <p className="text-xs text-green-800">
                 <i className="fas fa-info-circle mr-1"></i>
                 <strong>Recomendação:</strong> Use uma imagem quadrada (ex: 64x64px ou 128x128px) em PNG com fundo transparente.
-                {!faviconUrl && ' Sem favicon personalizado, será usado o ícone padrão BrandPet.'}
+                {!faviconUrl && ` Sem favicon personalizado, será usado o ícone padrão ${SITE_NAME}.`}
               </p>
             </div>
           </div>

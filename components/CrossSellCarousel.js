@@ -59,7 +59,7 @@ export default function ComboSuggestion({ currentProduct, suggestedProduct }) {
               <h4 className="text-sm font-semibold text-gray-900 line-clamp-2 leading-snug">
                 {currentProduct.name}
               </h4>
-              <p className="text-base font-bold mt-1.5" style={{ color: brandColor || '#101942' }}>
+              <p className="text-base font-bold mt-1.5" style={{ color: brandColor || '#0c0e0b' }}>
                 R$ {currentPrice.toFixed(2).replace('.', ',')}
               </p>
             </div>
@@ -92,7 +92,7 @@ export default function ComboSuggestion({ currentProduct, suggestedProduct }) {
                   {suggestedProduct.name}
                 </h4>
               </a>
-              <p className="text-base font-bold mt-1.5" style={{ color: brandColor || '#101942' }}>
+              <p className="text-base font-bold mt-1.5" style={{ color: brandColor || '#0c0e0b' }}>
                 R$ {suggestedPrice.toFixed(2).replace('.', ',')}
               </p>
             </div>
@@ -105,13 +105,13 @@ export default function ComboSuggestion({ currentProduct, suggestedProduct }) {
 
           <div className="flex-shrink-0 text-center md:text-right">
             <p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">Leve os 2 por</p>
-            <p className="text-2xl font-bold" style={{ color: brandColor || '#101942' }}>
+            <p className="text-2xl font-bold" style={{ color: brandColor || '#0c0e0b' }}>
               R$ {comboTotal.toFixed(2).replace('.', ',')}
             </p>
             <button
               onClick={handleAddBoth}
               className="mt-3 w-full md:w-auto px-6 py-2.5 rounded-lg text-white text-sm font-bold transition-all duration-200 hover:brightness-110 hover:shadow-md active:scale-[0.97]"
-              style={{ backgroundColor: brandColor || '#101942' }}
+              style={{ backgroundColor: brandColor || '#0c0e0b' }}
             >
               <svg className="w-4 h-4 inline-block mr-1.5 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />

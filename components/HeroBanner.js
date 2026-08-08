@@ -6,18 +6,24 @@ import { useAffiliate } from '../contexts/AffiliateContext';
 const slides = [
   {
     id: 1,
-    image: 'https://images.petz.com.br/fotos/Home_Novo_Desk_1790x600_Verao_Perene_CRIACAO_2025_12.jpg',
-    alt: 'Promoção Verão',
+    gradient: 'linear-gradient(135deg, #1d1d1f, #3a3a3c)',
+    icon: 'fa-mobile-alt',
+    title: 'iPhone parcelado em até 21x sem juros',
+    subtitle: 'Pague em reais, no seu cartão, do jeito que você já compra hoje.',
   },
   {
     id: 2,
-    image: 'https://images.petz.com.br/fotos/Home_Desk_1790x600_RacoesVerao30OFF.jpg',
-    alt: 'Rações Verão 30% OFF',
+    gradient: 'linear-gradient(135deg, #0043f7, #004a99)',
+    icon: 'fa-plane-departure',
+    title: 'Retirada pessoal em Orlando',
+    subtitle: 'Reserve agora e pegue seu aparelho na sua próxima viagem aos EUA.',
   },
   {
     id: 3,
-    image: 'https://images.petz.com.br/fotos/Home_Novo_Desk_1790x600_Giro_Transporte_CRIACAO_2025_11.jpg',
-    alt: 'Transporte Pet',
+    gradient: 'linear-gradient(135deg, #2c2c2e, #58585a)',
+    icon: 'fa-certificate',
+    title: 'Produtos 100% originais Apple',
+    subtitle: 'Lacrados, com nota fiscal americana e garantia internacional.',
   },
 ];
 
@@ -54,6 +60,17 @@ export default function HeroBanner() {
     return (currentSlide + offset + slides.length) % slides.length;
   };
 
+  const renderSlideContent = (slide) => (
+    <div
+      className="absolute inset-0 flex flex-col items-center justify-center text-center px-6"
+      style={{ background: slide.gradient }}
+    >
+      <i className={`fas ${slide.icon} text-white text-3xl md:text-4xl mb-3 opacity-90`}></i>
+      <h2 className="text-white font-bold text-lg md:text-3xl mb-2">{slide.title}</h2>
+      <p className="text-white text-opacity-80 text-xs md:text-base max-w-xl">{slide.subtitle}</p>
+    </div>
+  );
+
   return (
     <div className="relative w-full bg-gray-100 overflow-hidden">
       <div className="relative max-w-[1400px] mx-auto px-0 md:px-2 py-3 md:py-5">
@@ -64,15 +81,9 @@ export default function HeroBanner() {
           {/* Prev peek – desktop only */}
           <div
             className="hidden md:block flex-shrink-0 rounded-xl overflow-hidden cursor-pointer relative"
-            style={{ width: '4.5%' }}
+            style={{ width: '4.5%', background: slides[getSlideIndex(-1)].gradient, opacity: 0.6 }}
             onClick={prevSlide}
-          >
-            <img
-              src={slides[getSlideIndex(-1)].image}
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-          </div>
+          />
 
           {/* Main slide */}
           <div className="flex-1 relative rounded-xl md:rounded-2xl overflow-hidden" style={{ aspectRatio: '1121 / 375' }}>
@@ -83,12 +94,7 @@ export default function HeroBanner() {
                   index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
                 }`}
               >
-                <img
-                  src={slide.image}
-                  alt={slide.alt}
-                  className="w-full h-full object-cover"
-                  loading={index === 0 ? 'eager' : 'lazy'}
-                />
+                {renderSlideContent(slide)}
               </div>
             ))}
           </div>
@@ -96,15 +102,9 @@ export default function HeroBanner() {
           {/* Next peek – desktop only */}
           <div
             className="hidden md:block flex-shrink-0 rounded-xl overflow-hidden cursor-pointer relative"
-            style={{ width: '4.5%' }}
+            style={{ width: '4.5%', background: slides[getSlideIndex(1)].gradient, opacity: 0.6 }}
             onClick={nextSlide}
-          >
-            <img
-              src={slides[getSlideIndex(1)].image}
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-          </div>
+          />
 
           {/* Arrow left */}
           <button

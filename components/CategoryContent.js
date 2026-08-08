@@ -6,15 +6,15 @@ import ProductCard from './ProductCard';
 
 export default function CategoryContent({ categoryName, products }) {
   const [sortBy, setSortBy] = useState('relevancia');
-  const [priceRange, setPriceRange] = useState([0, 500]);
+  const [priceRange, setPriceRange] = useState([0, 15000]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const affiliate = useAffiliate();
 
   // Calcular preço máximo dos produtos
   const maxPrice = useMemo(() => {
-    if (products.length === 0) return 500;
-    return Math.ceil(Math.max(...products.map(p => p.price || 0)) / 50) * 50 || 500;
+    if (products.length === 0) return 15000;
+    return Math.ceil(Math.max(...products.map(p => p.price || 0)) / 50) * 50 || 15000;
   }, [products]);
 
   // Filtrar e ordenar produtos
@@ -108,7 +108,7 @@ export default function CategoryContent({ categoryName, products }) {
                 value={priceRange[1]}
                 onChange={(e) => setPriceRange([0, parseInt(e.target.value)])}
                 className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
-                style={{ accentColor: affiliate.brandColor || '#101942' }}
+                style={{ accentColor: affiliate.brandColor || '#0c0e0b' }}
               />
               <div className="flex justify-between text-xs text-gray-500 mt-2">
                 <span>R$ 0</span>
@@ -171,7 +171,7 @@ export default function CategoryContent({ categoryName, products }) {
                 <button
                   onClick={clearFilters}
                   className="text-sm font-medium px-5 py-2.5 rounded-lg transition-colors text-white"
-                  style={{ backgroundColor: affiliate.brandColor || '#101942' }}
+                  style={{ backgroundColor: affiliate.brandColor || '#0c0e0b' }}
                 >
                   Limpar filtros
                 </button>

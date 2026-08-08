@@ -7,24 +7,66 @@ export default function NavBar({ brandColor }) {
         <ul className="flex items-center justify-center gap-4 md:gap-8 p-3 text-sm font-bold overflow-x-auto whitespace-nowrap">
           <li>
             <a
-              href="/categoria/racoes"
+              href="/categoria/iphone"
               className="transition-colors"
               style={{ color: 'white' }}
               onMouseEnter={(e) => e.target.style.color = brandColor}
               onMouseLeave={(e) => e.target.style.color = 'white'}
             >
-              Rações
+              iPhone
             </a>
           </li>
           <li>
             <a
-              href="/categoria/brinquedos"
+              href="/categoria/mac"
               className="transition-colors"
               style={{ color: 'white' }}
               onMouseEnter={(e) => e.target.style.color = brandColor}
               onMouseLeave={(e) => e.target.style.color = 'white'}
             >
-              Brinquedos
+              Mac
+            </a>
+          </li>
+          <li>
+            <a
+              href="/categoria/ipad"
+              className="transition-colors"
+              style={{ color: 'white' }}
+              onMouseEnter={(e) => e.target.style.color = brandColor}
+              onMouseLeave={(e) => e.target.style.color = 'white'}
+            >
+              iPad
+            </a>
+          </li>
+          <li>
+            <a
+              href="/categoria/apple-watch"
+              className="transition-colors"
+              style={{ color: 'white' }}
+              onMouseEnter={(e) => e.target.style.color = brandColor}
+              onMouseLeave={(e) => e.target.style.color = 'white'}
+            >
+              Apple Watch
+            </a>
+          </li>
+          <li>
+            <a
+              href="/categoria/airpods"
+              className="transition-colors"
+              style={{ color: 'white' }}
+              onMouseEnter={(e) => e.target.style.color = brandColor}
+              onMouseLeave={(e) => e.target.style.color = 'white'}
+            >
+              AirPods
+            </a>
+          </li>
+          <li>
+            <a
+              href="/categoria/promocoes"
+              className="text-white py-1 px-3 rounded-full transition-transform hover:scale-105"
+              style={{ backgroundColor: brandColor }}
+            >
+              PARCELE EM 21X
             </a>
           </li>
           <li>
@@ -36,48 +78,6 @@ export default function NavBar({ brandColor }) {
               onMouseLeave={(e) => e.target.style.color = 'white'}
             >
               Acessórios
-            </a>
-          </li>
-          <li>
-            <a
-              href="/categoria/higiene-e-saude"
-              className="transition-colors"
-              style={{ color: 'white' }}
-              onMouseEnter={(e) => e.target.style.color = brandColor}
-              onMouseLeave={(e) => e.target.style.color = 'white'}
-            >
-              Higiene e Saúde
-            </a>
-          </li>
-          <li>
-            <a
-              href="/categoria/camas-e-casas"
-              className="transition-colors"
-              style={{ color: 'white' }}
-              onMouseEnter={(e) => e.target.style.color = brandColor}
-              onMouseLeave={(e) => e.target.style.color = 'white'}
-            >
-              Camas e Casas
-            </a>
-          </li>
-          <li>
-            <a
-              href="/categoria/promocoes"
-              className="text-white py-1 px-3 rounded-full transition-transform hover:scale-105"
-              style={{ backgroundColor: brandColor }}
-            >
-              PROMOÇÕES
-            </a>
-          </li>
-          <li>
-            <a
-              href="/categoria/passeio"
-              className="transition-colors"
-              style={{ color: 'white' }}
-              onMouseEnter={(e) => e.target.style.color = brandColor}
-              onMouseLeave={(e) => e.target.style.color = 'white'}
-            >
-              Passeio
             </a>
           </li>
         </ul>

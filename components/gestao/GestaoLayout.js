@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { SITE_NAME } from '../../lib/siteConfig';
 
 export default function GestaoLayout({ children, session }) {
   const router = useRouter();
@@ -40,11 +41,6 @@ export default function GestaoLayout({ children, session }) {
       label: 'Usuários',
       path: '/gestao/erp/usuarios',
     },
-    {
-      icon: 'fa-chart-line',
-      label: 'Preços IA',
-      path: '/gestao/erp/inteligencia-precos',
-    },
   ];
 
   const handleLogout = async () => {
@@ -73,12 +69,10 @@ export default function GestaoLayout({ children, session }) {
           {/* Logo/Header */}
           <div className="p-6 border-b-2 border-gray-100">
             <Link href="/gestao/erp" className="flex items-center gap-3 group">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-md group-hover:scale-105 transition-transform overflow-hidden bg-white border border-gray-200">
-                <img
-                  src="/logo/brand_pet_icone_azul.png"
-                  alt="BrandPet"
-                  className="w-10 h-10 object-contain"
-                />
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-md group-hover:scale-105 transition-transform overflow-hidden bg-gray-900 border border-gray-200">
+                <span className="text-white font-bold text-sm">
+                  {SITE_NAME.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                </span>
               </div>
               <div>
                 <p className="font-bold text-gray-900">Painel</p>

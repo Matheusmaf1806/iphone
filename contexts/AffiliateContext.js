@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext } from 'react';
+import { SITE_NAME } from '../lib/siteConfig';
 
 const AffiliateContext = createContext(null);
 
@@ -17,14 +18,14 @@ export function useAffiliate() {
   if (!context) {
     // Retornar config padrão se não houver contexto
     return {
-      brandColor: '#f60c49',
-      backgroundColor: '#ffffff',
-      buttonColor: '#f60c49',
-      buttonHover: '#d40a3f',
+      brandColor: '#0043f7',
+      backgroundColor: '#ebf0f6',
+      buttonColor: '#0043f7',
+      buttonHover: '#0036c6',
       buttonTextColor: '#ffffff',
-      buttonHover: '#d40a3f',
-      name: 'Folha de Guiné',
-      logo: 'https://brandpet.vercel.app/logo/brand_pet_logo_bege.png',
+      buttonHover: '#0036c6',
+      name: SITE_NAME,
+      logo: '',
     };
   }
   return context;

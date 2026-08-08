@@ -194,7 +194,7 @@ export default function CsvImportModal({ onClose, onSave }) {
                   <p className="text-green-700 font-bold">Obrigatórias:</p>
                   <p>Nome Sugerido (Venda), Custo Unit (R$)</p>
                   <p className="text-blue-700 font-bold mt-2">Opcionais:</p>
-                  <p>Idade, Tamanho, Porte, Sabor</p>
+                  <p>Categoria, Capacidade, Cor, Condição, Garantia</p>
                 </div>
               </div>
             </div>
@@ -221,10 +221,10 @@ export default function CsvImportModal({ onClose, onSave }) {
                     <tr>
                       <th className="px-4 py-3 text-left font-semibold text-gray-700">#</th>
                       <th className="px-4 py-3 text-left font-semibold text-gray-700">Nome (Venda)</th>
-                      <th className="px-4 py-3 text-left font-semibold text-gray-700">Idade</th>
-                      <th className="px-4 py-3 text-left font-semibold text-gray-700">Tamanho</th>
-                      <th className="px-4 py-3 text-left font-semibold text-gray-700">Porte</th>
-                      <th className="px-4 py-3 text-left font-semibold text-gray-700">Sabor</th>
+                      <th className="px-4 py-3 text-left font-semibold text-gray-700">Capacidade</th>
+                      <th className="px-4 py-3 text-left font-semibold text-gray-700">Cor</th>
+                      <th className="px-4 py-3 text-left font-semibold text-gray-700">Condição</th>
+                      <th className="px-4 py-3 text-left font-semibold text-gray-700">Garantia</th>
                       <th className="px-4 py-3 text-right font-semibold text-gray-700">Custo Unit</th>
                     </tr>
                   </thead>
@@ -235,10 +235,10 @@ export default function CsvImportModal({ onClose, onSave }) {
                         <td className="px-4 py-3 font-medium text-gray-900 max-w-xs truncate">
                           {product['Nome Sugerido (Venda)'] || '-'}
                         </td>
-                        <td className="px-4 py-3 text-gray-600">{product['Idade'] || '-'}</td>
-                        <td className="px-4 py-3 text-gray-600">{product['Tamanho'] || '-'}</td>
-                        <td className="px-4 py-3 text-gray-600">{product['Porte'] || '-'}</td>
-                        <td className="px-4 py-3 text-gray-600">{product['Sabor'] || '-'}</td>
+                        <td className="px-4 py-3 text-gray-600">{product['Capacidade'] || '-'}</td>
+                        <td className="px-4 py-3 text-gray-600">{product['Cor'] || '-'}</td>
+                        <td className="px-4 py-3 text-gray-600">{product['Condição'] || '-'}</td>
+                        <td className="px-4 py-3 text-gray-600">{product['Garantia'] || '-'}</td>
                         <td className="px-4 py-3 text-right text-gray-900 font-mono">
                           {parseMoneyDisplay(product['Custo Unit (R$)'])}
                         </td>

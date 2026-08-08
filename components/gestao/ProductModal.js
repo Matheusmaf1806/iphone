@@ -216,7 +216,7 @@ export default function ProductModal({ product, onClose, onSave }) {
       const salePrice = calculateSalePrice();
 
       // Calcular valor da parcela (assumindo parcelamento padrão)
-      const defaultInstallments = 12; // Todos produtos podem ser parcelados em até 12x
+      const defaultInstallments = 21; // Todos produtos podem ser parcelados em até 21x
       const installmentValue = salePrice > 0 ? (salePrice / defaultInstallments) : null;
 
       const mainImageUrl = productImages.length > 0 ? productImages[0] : formData.image_url || null;
@@ -421,17 +421,13 @@ export default function ProductModal({ product, onClose, onSave }) {
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all"
                     >
                       <option value="">Selecione uma categoria</option>
-                      <option value="racoes">Rações</option>
-                      <option value="brinquedos">Brinquedos</option>
+                      <option value="iphone">iPhone</option>
+                      <option value="mac">Mac</option>
+                      <option value="ipad">iPad</option>
+                      <option value="apple-watch">Apple Watch</option>
+                      <option value="airpods">AirPods</option>
                       <option value="acessorios">Acessórios</option>
-                      <option value="higiene-e-saude">Higiene e Saúde</option>
-                      <option value="camas-e-casas">Camas e Casas</option>
-                      <option value="passeio">Passeio</option>
-                      <option value="coleiras">Coleiras</option>
-                      <option value="guias">Guias</option>
-                      <option value="petiscos">Petiscos</option>
-                      <option value="farmacia">Farmácia</option>
-                      <option value="limpeza">Limpeza</option>
+                      <option value="seminovos">Seminovos</option>
                       <option value="outros">Outros</option>
                     </select>
                   </div>
@@ -799,7 +795,7 @@ export default function ProductModal({ product, onClose, onSave }) {
                           Fórmula: R$ {formData.cost_price} / (1 - {formData.supplier_margin_percentage}%) = R$ {salePrice.toFixed(2)}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
-                          📦 Parcelamento: até 12x de R$ {(salePrice / 12).toFixed(2)} sem juros
+                          📦 Parcelamento: até 21x de R$ {(salePrice / 21).toFixed(2)} sem juros
                         </p>
                       </div>
                       <div className="text-right">

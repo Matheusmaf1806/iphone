@@ -8,7 +8,6 @@ const CartContext = createContext();
 const VALID_COUPONS = {
   'PRIMEIRACOMPRA': { type: 'percentage', value: 10, description: '10% de desconto' },
   'BEMVINDO': { type: 'percentage', value: 15, description: '15% de desconto' },
-  'FRETEGRATIS': { type: 'free_shipping', value: 0, description: 'Frete grátis' },
   'DESCONTO20': { type: 'percentage', value: 20, description: '20% de desconto' },
 };
 

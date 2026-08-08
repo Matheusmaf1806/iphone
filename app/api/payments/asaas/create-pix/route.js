@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '../../../../../lib/supabase/server';
+import { SITE_NAME } from '../../../../../lib/siteConfig';
 
 const getAsaasBaseUrl = () =>
   process.env.ASAAS_ENVIRONMENT === 'production'
@@ -69,7 +70,7 @@ export async function POST(request) {
         billingType: 'PIX',
         value: Number(amount.toFixed(2)),
         dueDate,
-        description: `Pedido BrandPet #${orderId}`,
+        description: `Pedido ${SITE_NAME} #${orderId}`,
         externalReference: String(orderId),
       }),
     });

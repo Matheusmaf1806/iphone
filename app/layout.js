@@ -5,10 +5,11 @@ import { CartProvider } from '../contexts/CartContext';
 import { AffiliateProvider } from '../contexts/AffiliateContext';
 import { CustomerProvider } from '../contexts/CustomerContext';
 import CartDrawer from '../components/CartDrawer';
+import { SITE_NAME, SITE_TAGLINE, SITE_DESCRIPTION } from '../lib/siteConfig';
 
 export const metadata = {
-  title: 'BrandPet - Tudo para o seu Pet',
-  description: 'Rações, brinquedos, acessórios e tudo que seu pet precisa para ser feliz e saudável. As melhores marcas com os melhores preços.',
+  title: `${SITE_NAME} - ${SITE_TAGLINE}`,
+  description: SITE_DESCRIPTION,
 };
 
 export default async function RootLayout({ children }) {
@@ -28,11 +29,13 @@ export default async function RootLayout({ children }) {
           rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
         />
-        <link rel="icon" href={affiliateConfig.favicon || '/logo/brand_pet_logo_azul.png'} type="image/png" />
+        {affiliateConfig.favicon && (
+          <link rel="icon" href={affiliateConfig.favicon} type="image/png" />
+        )}
         <style dangerouslySetInnerHTML={{
           __html: `
             :root {
-              --brand-color: ${affiliateConfig.brandColor || '#f60c49'};
+              --brand-color: ${affiliateConfig.brandColor || '#0043f7'};
             }
           `
         }} />

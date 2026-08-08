@@ -94,7 +94,7 @@ export async function POST(request) {
           price: costPrice / (1 - marginPercentage / 100),
           cost_price: costPrice,
           supplier_margin_percentage: marginPercentage,
-          category: 'racoes',
+          category: row['Categoria'] || null,
           is_active: true,
           is_featured: false,
           stock_quantity: 0,
@@ -113,15 +113,15 @@ export async function POST(request) {
           continue;
         }
 
-        // Inserir detalhes do produto (atributos pet)
+        // Inserir detalhes do produto (especificações)
         const details = [];
         let order = 1;
 
         const detailMappings = [
-          { csvKey: 'Idade', label: 'Idade' },
-          { csvKey: 'Tamanho', label: 'Tamanho' },
-          { csvKey: 'Porte', label: 'Porte' },
-          { csvKey: 'Sabor', label: 'Sabor' },
+          { csvKey: 'Capacidade', label: 'Capacidade' },
+          { csvKey: 'Cor', label: 'Cor' },
+          { csvKey: 'Condição', label: 'Condição' },
+          { csvKey: 'Garantia', label: 'Garantia' },
         ];
 
         for (const mapping of detailMappings) {

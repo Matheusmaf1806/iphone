@@ -4,6 +4,7 @@ import { useAffiliate } from '../contexts/AffiliateContext';
 import { useCart } from '../contexts/CartContext';
 import { useCustomer } from '../contexts/CustomerContext';
 import SearchBar from './SearchBar';
+import Logo from './Logo';
 
 export default function ClientHeader({ config }) {
   const affiliate = useAffiliate();
@@ -21,7 +22,7 @@ export default function ClientHeader({ config }) {
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
 
-  const brandColor = config.brandColor || '#f60c49';
+  const brandColor = config.brandColor || '#0043f7';
 
   const resetForm = () => {
     setLoginEmail('');
@@ -89,11 +90,7 @@ export default function ClientHeader({ config }) {
           {/* Logo */}
           <div>
             <a href="/">
-              <img
-                src={config.logo}
-                alt={`Logo ${config.name}`}
-                className="h-14"
-              />
+              <Logo src={config.logo} name={config.name} imgClassName="h-14" textClassName="text-2xl font-bold tracking-tight text-white" />
             </a>
           </div>
 
@@ -130,8 +127,8 @@ export default function ClientHeader({ config }) {
                 />
               </svg>
               <div className="text-sm">
-                <p className="font-light">Nossas</p>
-                <p className="font-semibold">Pet Shops</p>
+                <p className="font-light">Retirada</p>
+                <p className="font-semibold">em Orlando</p>
               </div>
             </a>
 
@@ -242,7 +239,7 @@ export default function ClientHeader({ config }) {
 
               <div className="flex items-center gap-3 mb-5">
                 <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: brandColor }}>
-                  <i className="fas fa-paw text-white text-sm"></i>
+                  <i className="fas fa-mobile-alt text-white text-sm"></i>
                 </div>
                 <div>
                   <p className="font-bold text-gray-900">Bem-vindo!</p>
