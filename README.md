@@ -24,7 +24,6 @@ Plataforma completa de e-commerce com sistema de afiliados, white-label e ERP de
 - Sistema de carrinho de compras
 - Calculadora de frete
 - Avaliações e classificações de produtos
-- Oráculo de Aruanda (integração com Gemini AI)
 - Busca e filtros de produtos
 - Produtos em destaque
 
@@ -57,7 +56,6 @@ axe/
 │   ├── ProductGallery.js       # Galeria de imagens
 │   ├── ProductActions.js       # Ações do produto
 │   ├── ProductTabs.js          # Abas de descrição
-│   ├── GeminiRitual.js         # Oráculo com IA
 │   └── gestao/                 # Componentes de gestão
 │       ├── GestaoLayout.js    # Layout do ERP
 │       ├── LoginForm.js       # Formulário de login
@@ -247,14 +245,13 @@ O sistema detecta automaticamente o domínio e aplica as configurações.
 
 ## 🤖 Integração com Gemini AI
 
-O "Oráculo de Aruanda" usa a API do Google Gemini.
+A geração de descrição de produtos por IA (`/api/ai/description`) usa a API do Google Gemini (com fallback para Groq).
 
 1. Obtenha uma chave em [Google AI Studio](https://makersuite.google.com/app/apikey)
 2. Adicione no `.env`:
 ```env
 GEMINI_API_KEY=sua-chave-aqui
 ```
-3. Atualize `components/GeminiRitual.js` linha 10 para usar a variável
 
 ## 📊 APIs Disponíveis
 
