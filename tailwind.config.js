@@ -7,6 +7,20 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: [
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'SF Pro Display',
+          'SF Pro Text',
+          'Inter',
+          'Segoe UI',
+          'Roboto',
+          'Helvetica',
+          'Arial',
+          'sans-serif',
+        ],
+      },
       colors: {
         'brand-yellow': 'var(--brand-color, #0043f7)',
         'custom-yellow': 'var(--brand-color, #0043f7)',
