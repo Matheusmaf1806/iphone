@@ -95,7 +95,7 @@ export async function POST(request) {
         domain: domain || null,
         subdomain: cleanSlug,
         cnpj: cnpj || null,
-        commission_rate: commission_rate ? parseFloat(commission_rate) : 0.10,
+        commission_rate: commission_rate ? parseFloat(commission_rate) : 10,
         is_active: true,
         logo_url: logo_url || null,
         primary_color: primary_color || '#0043f7',

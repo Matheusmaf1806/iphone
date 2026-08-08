@@ -16,7 +16,7 @@ const INITIAL_FORM = {
   slug: '',
   domain: '',
   cnpj: '',
-  commission_rate: '0.10',
+  commission_rate: '10',
   logo_url: '',
   primary_color: DEFAULT_COLORS.primary_color,
   background_color: DEFAULT_COLORS.background_color,
@@ -260,12 +260,12 @@ export default function AfiliadosManager() {
                       onChange={handleChange}
                       className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm"
                     >
-                      <option value="0.05">5%</option>
-                      <option value="0.08">8%</option>
-                      <option value="0.10">10%</option>
-                      <option value="0.12">12%</option>
-                      <option value="0.15">15%</option>
-                      <option value="0.20">20%</option>
+                      <option value="5">5%</option>
+                      <option value="8">8%</option>
+                      <option value="10">10%</option>
+                      <option value="12">12%</option>
+                      <option value="15">15%</option>
+                      <option value="20">20%</option>
                     </select>
                   </div>
                 </div>
