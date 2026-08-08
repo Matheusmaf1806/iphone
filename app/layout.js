@@ -35,7 +35,7 @@ export default async function RootLayout({ children }) {
         <style dangerouslySetInnerHTML={{
           __html: `
             :root {
-              --brand-color: ${affiliateConfig.brandColor || '#0071e3'};
+              --brand-color: ${affiliateConfig.brandColor || '#0043f7'};
             }
           `
         }} />

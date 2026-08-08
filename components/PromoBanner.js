@@ -5,7 +5,7 @@ export default function PromoBanner() {
         <a
           href="/categoria/promocoes"
           className="block rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden"
-          style={{ background: 'linear-gradient(135deg, #0071e3, #1d1d1f)', maxHeight: '200px' }}
+          style={{ background: 'linear-gradient(135deg, #0043f7, #1d1d1f)', maxHeight: '200px' }}
         >
           <div className="flex items-center justify-center gap-4 px-6 py-8 md:py-10 text-center">
             <i className="fas fa-tags text-white text-2xl md:text-3xl"></i>

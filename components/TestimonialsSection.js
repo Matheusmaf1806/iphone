@@ -79,7 +79,7 @@ export default function TestimonialsSection() {
 
               <div className="flex gap-1 mb-3">
                 {[...Array(testimonial.rating)].map((_, i) => (
-                  <i key={i} className="fas fa-star" style={{ color: affiliate.buttonColor || '#0071e3' }}></i>
+                  <i key={i} className="fas fa-star" style={{ color: affiliate.buttonColor || '#0043f7' }}></i>
                 ))}
               </div>
 
@@ -92,7 +92,7 @@ export default function TestimonialsSection() {
 
         {/* Mobile: Carousel */}
         <div className="md:hidden relative">
-          <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-6 shadow-xl border-2" style={{ borderColor: affiliate.buttonColor || '#0071e3' }}>
+          <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-6 shadow-xl border-2" style={{ borderColor: affiliate.buttonColor || '#0043f7' }}>
             <div className="flex items-center gap-4 mb-4">
               <img
                 src={testimonials[current].image}
@@ -111,7 +111,7 @@ export default function TestimonialsSection() {
 
             <div className="flex gap-1 mb-3">
               {[...Array(testimonials[current].rating)].map((_, i) => (
-                <i key={i} className="fas fa-star" style={{ color: affiliate.buttonColor || '#0071e3' }}></i>
+                <i key={i} className="fas fa-star" style={{ color: affiliate.buttonColor || '#0043f7' }}></i>
               ))}
             </div>
 
@@ -125,14 +125,14 @@ export default function TestimonialsSection() {
             <button
               onClick={prev}
               className="bg-brand-dark w-10 h-10 rounded-full flex items-center justify-center hover:opacity-90 transition-all shadow-lg"
-              style={{ color: affiliate.buttonColor || '#0071e3' }}
+              style={{ color: affiliate.buttonColor || '#0043f7' }}
             >
               <i className="fas fa-chevron-left"></i>
             </button>
             <button
               onClick={next}
               className="bg-brand-dark w-10 h-10 rounded-full flex items-center justify-center hover:opacity-90 transition-all shadow-lg"
-              style={{ color: affiliate.buttonColor || '#0071e3' }}
+              style={{ color: affiliate.buttonColor || '#0043f7' }}
             >
               <i className="fas fa-chevron-right"></i>
             </button>

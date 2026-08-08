@@ -4,11 +4,11 @@ import { useState, useEffect } from 'react';
 import ImageUpload from '../shared/ImageUpload';
 
 const DEFAULT_COLORS = {
-  primary_color: '#0071e3',
-  background_color: '#ffffff',
-  button_color: '#0071e3',
+  primary_color: '#0043f7',
+  background_color: '#ebf0f6',
+  button_color: '#0043f7',
   button_text_color: '#ffffff',
-  button_hover: '#0058b3',
+  button_hover: '#0036c6',
 };
 
 const INITIAL_FORM = {

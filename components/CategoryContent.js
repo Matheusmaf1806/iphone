@@ -108,7 +108,7 @@ export default function CategoryContent({ categoryName, products }) {
                 value={priceRange[1]}
                 onChange={(e) => setPriceRange([0, parseInt(e.target.value)])}
                 className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
-                style={{ accentColor: affiliate.brandColor || '#101942' }}
+                style={{ accentColor: affiliate.brandColor || '#0c0e0b' }}
               />
               <div className="flex justify-between text-xs text-gray-500 mt-2">
                 <span>R$ 0</span>
@@ -171,7 +171,7 @@ export default function CategoryContent({ categoryName, products }) {
                 <button
                   onClick={clearFilters}
                   className="text-sm font-medium px-5 py-2.5 rounded-lg transition-colors text-white"
-                  style={{ backgroundColor: affiliate.brandColor || '#101942' }}
+                  style={{ backgroundColor: affiliate.brandColor || '#0c0e0b' }}
                 >
                   Limpar filtros
                 </button>

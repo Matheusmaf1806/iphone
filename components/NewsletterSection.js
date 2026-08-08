@@ -18,7 +18,7 @@ export default function NewsletterSection() {
   };
 
   return (
-    <section className="py-12 md:py-14 relative overflow-hidden" style={{ background: 'linear-gradient(to right, #0d1233, #101942, #0d1233)' }}>
+    <section className="py-12 md:py-14 relative overflow-hidden" style={{ background: 'linear-gradient(to right, #0d1233, #0c0e0b, #0d1233)' }}>
       {/* Decorative Elements */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-10 left-10 w-64 h-64 rounded-full blur-3xl" style={{ backgroundColor: brandColor }}></div>

@@ -152,7 +152,7 @@ export default function SearchBar() {
 
                   {/* Price */}
                   <div className="text-right">
-                    <p className="text-lg font-bold " style={{ color: affiliate.buttonColor || '#0071e3' }}>
+                    <p className="text-lg font-bold " style={{ color: affiliate.buttonColor || '#0043f7' }}>
                       R$ {product.price.toFixed(2).replace('.', ',')}
                     </p>
                   </div>

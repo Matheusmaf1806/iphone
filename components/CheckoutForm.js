@@ -596,11 +596,11 @@ export default function CheckoutForm({ config }) {
     <div className="container mx-auto px-4">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-gray-600 mb-8">
-        <a href="/" className="transition-colors" style={{ color: affiliate.buttonColor || '#0071e3' }}>
+        <a href="/" className="transition-colors" style={{ color: affiliate.buttonColor || '#0043f7' }}>
           Início
         </a>
         <i className="fas fa-chevron-right text-xs"></i>
-        <a href="/carrinho" className="transition-colors" style={{ color: affiliate.buttonColor || '#0071e3' }}>
+        <a href="/carrinho" className="transition-colors" style={{ color: affiliate.buttonColor || '#0043f7' }}>
           Carrinho
         </a>
         <i className="fas fa-chevron-right text-xs"></i>
@@ -650,7 +650,7 @@ export default function CheckoutForm({ config }) {
             {currentStep === 1 && (
               <div className="bg-white rounded-2xl p-6 md:p-8 shadow-md">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                  <i className="fas fa-user " style={{ color: affiliate.buttonColor || '#0071e3' }}></i>
+                  <i className="fas fa-user " style={{ color: affiliate.buttonColor || '#0043f7' }}></i>
                   Dados Pessoais
                 </h2>
 
@@ -736,7 +736,7 @@ export default function CheckoutForm({ config }) {
             {currentStep === 2 && (
               <div className="bg-white rounded-2xl p-6 md:p-8 shadow-md">
                 <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-3">
-                  <i className="fas fa-plane-departure " style={{ color: affiliate.buttonColor || '#0071e3' }}></i>
+                  <i className="fas fa-plane-departure " style={{ color: affiliate.buttonColor || '#0043f7' }}></i>
                   Retirada em Orlando
                 </h2>
                 <p className="text-sm text-gray-500 mb-6">
@@ -813,7 +813,7 @@ export default function CheckoutForm({ config }) {
                     checked={formData.termsAccepted}
                     onChange={(e) => setFormData(prev => ({ ...prev, termsAccepted: e.target.checked }))}
                     className="mt-1 w-4 h-4 rounded"
-                    style={{ accentColor: affiliate.buttonColor || '#0071e3' }}
+                    style={{ accentColor: affiliate.buttonColor || '#0043f7' }}
                   />
                   <span className="text-sm text-gray-700">
                     Li e estou de acordo com as condições de retirada em Orlando acima. *
@@ -827,7 +827,7 @@ export default function CheckoutForm({ config }) {
             {currentStep === 3 && (
               <div className="bg-white rounded-2xl p-6 md:p-8 shadow-md">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                  <i className="fas fa-credit-card " style={{ color: affiliate.buttonColor || '#0071e3' }}></i>
+                  <i className="fas fa-credit-card " style={{ color: affiliate.buttonColor || '#0043f7' }}></i>
                   Forma de Pagamento
                 </h2>
 
@@ -892,11 +892,11 @@ export default function CheckoutForm({ config }) {
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                     style={formData.paymentMethod === 'credit-card' ? {
-                      borderColor: affiliate.buttonColor || '#0071e3',
-                      backgroundColor: `${affiliate.buttonColor || '#0071e3'}15`
+                      borderColor: affiliate.buttonColor || '#0043f7',
+                      backgroundColor: `${affiliate.buttonColor || '#0043f7'}15`
                     } : {}}
                   >
-                    <i className="fas fa-credit-card text-2xl mb-2" style={{ color: affiliate.buttonColor || '#0071e3' }}></i>
+                    <i className="fas fa-credit-card text-2xl mb-2" style={{ color: affiliate.buttonColor || '#0043f7' }}></i>
                     <p className="font-bold text-gray-900 text-sm">Cartão</p>
                     <p className="text-[10px] text-gray-500">Até 21x s/ juros</p>
                   </button>
@@ -1105,7 +1105,7 @@ export default function CheckoutForm({ config }) {
                     router.push('/');
                   }}
                   className="px-8 py-3 rounded-xl font-bold text-white transition-all hover:shadow-lg"
-                  style={{ backgroundColor: affiliate.buttonColor || '#0071e3' }}
+                  style={{ backgroundColor: affiliate.buttonColor || '#0043f7' }}
                 >
                   Já realizei o pagamento
                 </button>
@@ -1128,7 +1128,7 @@ export default function CheckoutForm({ config }) {
                 <button
                   onClick={() => router.push('/')}
                   className="px-8 py-3 rounded-xl font-bold text-white transition-all hover:shadow-lg"
-                  style={{ backgroundColor: affiliate.buttonColor || '#0071e3' }}
+                  style={{ backgroundColor: affiliate.buttonColor || '#0043f7' }}
                 >
                   Voltar à Loja
                 </button>
@@ -1152,7 +1152,7 @@ export default function CheckoutForm({ config }) {
                     type="button"
                     onClick={handleNextStep}
                     className="flex-1 bg-black font-bold py-4 rounded-xl hover:bg-gray-800 transition-colors"
-                    style={{ color: affiliate.buttonColor || '#0071e3' }}
+                    style={{ color: affiliate.buttonColor || '#0043f7' }}
                   >
                     Continuar
                   </button>
@@ -1164,7 +1164,7 @@ export default function CheckoutForm({ config }) {
                       (formData.paymentMethod === 'credit-card' && !cardFieldsReady)
                     }
                     className="flex-1 font-bold py-4 rounded-xl hover:shadow-lg transition-all disabled:opacity-50 text-white"
-                    style={{ background: `linear-gradient(to right, ${affiliate.buttonColor || '#0071e3'}, ${affiliate.buttonHover || '#0058b3'})` }}
+                    style={{ background: `linear-gradient(to right, ${affiliate.buttonColor || '#0043f7'}, ${affiliate.buttonHover || '#0036c6'})` }}
                   >
                     {isSubmitting ? (
                       <span className="flex items-center justify-center gap-2">
@@ -1208,7 +1208,7 @@ export default function CheckoutForm({ config }) {
                     <div className="flex-1">
                       <h4 className="text-sm font-semibold text-gray-900">{item.name}</h4>
                       <p className="text-xs text-gray-600">Qtd: {item.quantity}</p>
-                      <p className="text-sm font-bold " style={{ color: affiliate.buttonColor || '#0071e3' }}>
+                      <p className="text-sm font-bold " style={{ color: affiliate.buttonColor || '#0043f7' }}>
                         R$ {itemTotal.toFixed(2).replace('.', ',')}
                       </p>
                     </div>
@@ -1286,7 +1286,7 @@ export default function CheckoutForm({ config }) {
 
             <div className="flex justify-between items-center text-lg font-bold">
               <span>Total</span>
-              <span className=" text-2xl" style={{ color: affiliate.buttonColor || '#0071e3' }}>R$ {pricing.total.toFixed(2).replace('.', ',')}</span>
+              <span className=" text-2xl" style={{ color: affiliate.buttonColor || '#0043f7' }}>R$ {pricing.total.toFixed(2).replace('.', ',')}</span>
             </div>
 
             {/* Comissão do Afiliado — só aparece quando o usuário logado é dono desta loja */}
@@ -1294,7 +1294,7 @@ export default function CheckoutForm({ config }) {
               <div className="mt-4 pt-4 border-t-2 border-gray-200">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-bold text-gray-700 flex items-center gap-1">
-                    <i className="fas fa-percentage text-xs" style={{ color: affiliate.buttonColor || '#0071e3' }}></i>
+                    <i className="fas fa-percentage text-xs" style={{ color: affiliate.buttonColor || '#0043f7' }}></i>
                     Sua comissão
                   </span>
                   <button
@@ -1337,7 +1337,7 @@ export default function CheckoutForm({ config }) {
                 <span>Pagamento 100% seguro</span>
               </div>
               <div className="flex items-center gap-2 text-sm text-gray-600">
-                <i className="fas fa-plane-departure " style={{ color: affiliate.buttonColor || '#0071e3' }}></i>
+                <i className="fas fa-plane-departure " style={{ color: affiliate.buttonColor || '#0043f7' }}></i>
                 <span>Retirada pessoal em Orlando</span>
               </div>
             </div>
@@ -1446,7 +1446,7 @@ export default function CheckoutForm({ config }) {
                       {commissionUnit > 0 && (
                         <div className="flex justify-between text-sm border-t border-gray-200 pt-2 mt-1">
                           <span className="text-gray-500">Sua comissão</span>
-                          <span className="font-bold" style={{ color: affiliate.buttonColor || '#0071e3' }}>
+                          <span className="font-bold" style={{ color: affiliate.buttonColor || '#0043f7' }}>
                             ≈ R$ {(commissionUnit * item.quantity).toFixed(2).replace('.', ',')}
                           </span>
                         </div>
@@ -1473,7 +1473,7 @@ export default function CheckoutForm({ config }) {
               type="button"
               onClick={() => setShowCommissionModal(false)}
               className="flex-1 py-3 text-white font-bold rounded-xl transition-colors"
-              style={{ backgroundColor: affiliate.buttonColor || '#0071e3' }}
+              style={{ backgroundColor: affiliate.buttonColor || '#0043f7' }}
             >
               Aplicar
             </button>

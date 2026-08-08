@@ -21,7 +21,7 @@ export default async function Header() {
       <ClientHeader config={config} />
 
       {/* CAMADA 3: Barra de Navegação */}
-      <NavBar brandColor={config.brandColor || '#0071e3'} />
+      <NavBar brandColor={config.brandColor || '#0043f7'} />
     </header>
   );
 }

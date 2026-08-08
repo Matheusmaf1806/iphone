@@ -89,14 +89,14 @@ export default function ProductActions({ product }) {
             onClick={addToCart}
             className="flex-grow font-bold text-base py-3 px-6 transition-all action-button rounded-r-lg"
             style={{
-              backgroundColor: affiliate.buttonColor || '#0071e3',
-              color: affiliate.buttonTextColor || '#000000',
+              backgroundColor: affiliate.buttonColor || '#0043f7',
+              color: affiliate.buttonTextColor || '#0c0e0b',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = affiliate.buttonHover || '#0058b3';
+              e.currentTarget.style.backgroundColor = affiliate.buttonHover || '#0036c6';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = affiliate.buttonColor || '#0071e3';
+              e.currentTarget.style.backgroundColor = affiliate.buttonColor || '#0043f7';
             }}
           >
             Adicionar ao Carrinho
@@ -107,7 +107,7 @@ export default function ProductActions({ product }) {
       <div className="flex flex-col gap-3 mt-4">
         <button
           className="w-full bg-brand-dark font-bold py-3 px-6 rounded-lg shadow-md hover:opacity-90 transition-all transform hover:scale-105 action-button"
-          style={{ color: affiliate.buttonColor || '#0071e3' }}
+          style={{ color: affiliate.buttonColor || '#0043f7' }}
         >
           Comprar Agora
         </button>

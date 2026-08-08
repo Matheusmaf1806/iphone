@@ -22,7 +22,7 @@ export default function ClientHeader({ config }) {
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
 
-  const brandColor = config.brandColor || '#0071e3';
+  const brandColor = config.brandColor || '#0043f7';
 
   const resetForm = () => {
     setLoginEmail('');

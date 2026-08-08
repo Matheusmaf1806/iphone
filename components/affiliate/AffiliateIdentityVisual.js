@@ -9,11 +9,11 @@ import { SITE_NAME } from '../../lib/siteConfig';
 export default function AffiliateIdentityVisual({ session }) {
   const [logoUrl, setLogoUrl] = useState('');
   const [faviconUrl, setFaviconUrl] = useState('');
-  const [primaryColor, setPrimaryColor] = useState('#0071e3');
-  const [backgroundColor, setBackgroundColor] = useState('#ffffff');
-  const [buttonColor, setButtonColor] = useState('#0071e3');
-  const [buttonTextColor, setButtonTextColor] = useState('#101942');
-  const [buttonHover, setButtonHover] = useState('#0058b3');
+  const [primaryColor, setPrimaryColor] = useState('#0043f7');
+  const [backgroundColor, setBackgroundColor] = useState('#ebf0f6');
+  const [buttonColor, setButtonColor] = useState('#0043f7');
+  const [buttonTextColor, setButtonTextColor] = useState('#0c0e0b');
+  const [buttonHover, setButtonHover] = useState('#0036c6');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState(null);
@@ -40,11 +40,11 @@ export default function AffiliateIdentityVisual({ session }) {
       if (result.success && result.data) {
         setLogoUrl(result.data.logoUrl || '');
         setFaviconUrl(result.data.faviconUrl || '');
-        setPrimaryColor(result.data.primaryColor || '#0071e3');
-        setBackgroundColor(result.data.backgroundColor || '#ffffff');
-        setButtonColor(result.data.buttonColor || '#0071e3');
-        setButtonTextColor(result.data.buttonTextColor || '#101942');
-        setButtonHover(result.data.buttonHover || '#0058b3');
+        setPrimaryColor(result.data.primaryColor || '#0043f7');
+        setBackgroundColor(result.data.backgroundColor || '#ebf0f6');
+        setButtonColor(result.data.buttonColor || '#0043f7');
+        setButtonTextColor(result.data.buttonTextColor || '#0c0e0b');
+        setButtonHover(result.data.buttonHover || '#0036c6');
       } else {
         throw new Error(result.error || 'Resposta inválida da API');
       }
@@ -95,11 +95,11 @@ export default function AffiliateIdentityVisual({ session }) {
     if (confirm('Tem certeza que deseja resetar todas as configurações?')) {
       setLogoUrl('');
       setFaviconUrl('');
-      setPrimaryColor('#0071e3');
-      setBackgroundColor('#ffffff');
-      setButtonColor('#0071e3');
-      setButtonTextColor('#000000');
-      setButtonHover('#0058b3');
+      setPrimaryColor('#0043f7');
+      setBackgroundColor('#ebf0f6');
+      setButtonColor('#0043f7');
+      setButtonTextColor('#0c0e0b');
+      setButtonHover('#0036c6');
       setMessage({ type: 'info', text: 'Configurações resetadas. Clique em "Salvar" para aplicar.' });
     }
   };
@@ -132,7 +132,7 @@ export default function AffiliateIdentityVisual({ session }) {
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-brand-yellow focus:ring-2 focus:ring-brand-yellow/20 transition-all"
-          placeholder="#0071e3"
+          placeholder="#0043f7"
           maxLength={7}
         />
 

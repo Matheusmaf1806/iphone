@@ -18,12 +18,12 @@ export function useAffiliate() {
   if (!context) {
     // Retornar config padrão se não houver contexto
     return {
-      brandColor: '#0071e3',
-      backgroundColor: '#ffffff',
-      buttonColor: '#0071e3',
-      buttonHover: '#0058b3',
+      brandColor: '#0043f7',
+      backgroundColor: '#ebf0f6',
+      buttonColor: '#0043f7',
+      buttonHover: '#0036c6',
       buttonTextColor: '#ffffff',
-      buttonHover: '#0058b3',
+      buttonHover: '#0036c6',
       name: SITE_NAME,
       logo: '',
     };

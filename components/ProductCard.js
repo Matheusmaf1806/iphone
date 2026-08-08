@@ -80,7 +80,7 @@ export default function ProductCard({ product, layout = 'grid' }) {
               </p>
             )}
             <div className="flex items-baseline gap-1.5">
-              <span className="text-lg font-bold" style={{ color: brandColor || '#101942' }}>
+              <span className="text-lg font-bold" style={{ color: brandColor || '#0c0e0b' }}>
                 R$ {displayPrice.toFixed(2).replace('.', ',')}
               </span>
               {hasDiscount && (
@@ -102,7 +102,7 @@ export default function ProductCard({ product, layout = 'grid' }) {
       <button
         onClick={handleAddToCart}
         className="w-full flex items-center justify-between px-4 py-3 text-white text-sm font-bold transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
-        style={{ backgroundColor: brandColor || '#101942' }}
+        style={{ backgroundColor: brandColor || '#0c0e0b' }}
       >
         <span>VER OPÇÕES</span>
         <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

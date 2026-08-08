@@ -13,7 +13,7 @@ const slides = [
   },
   {
     id: 2,
-    gradient: 'linear-gradient(135deg, #0071e3, #004a99)',
+    gradient: 'linear-gradient(135deg, #0043f7, #004a99)',
     icon: 'fa-plane-departure',
     title: 'Retirada pessoal em Orlando',
     subtitle: 'Reserve agora e pegue seu aparelho na sua próxima viagem aos EUA.',
