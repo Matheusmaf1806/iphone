@@ -1,6 +1,7 @@
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import HeroBanner from '../components/HeroBanner';
+import ShoppingAssistant from '../components/ShoppingAssistant';
 import FeaturesBar from '../components/FeaturesBar';
 import CategoriesSection from '../components/CategoriesSection';
 import AppleUniverseCarousel from '../components/AppleUniverseCarousel';
@@ -166,6 +167,7 @@ export default async function Home() {
 
       <main>
         <HeroBanner />
+        <ShoppingAssistant />
         <FeaturesBar />
         <CategoriesSection />
         <AppleUniverseCarousel startingPrices={startingPrices} />
