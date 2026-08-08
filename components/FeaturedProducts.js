@@ -97,9 +97,6 @@ export default function FeaturedProducts({ products, title = 'Produtos em Destaq
 
         {/* Carousel */}
         <div className="relative">
-          {/* Left fade — sem fresta */}
-          <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
-
           <div
             ref={scrollRef}
             onMouseEnter={() => setIsPaused(true)}
@@ -119,9 +116,6 @@ export default function FeaturedProducts({ products, title = 'Produtos em Destaq
               </div>
             ))}
           </div>
-
-          {/* Right fade — sem fresta */}
-          <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
         </div>
       </div>
 
