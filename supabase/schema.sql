@@ -4,11 +4,10 @@
 -- TODAS as queries Supabase do repositório, não é o schema original).
 --
 -- Rode este arquivo inteiro no SQL Editor do Supabase, em um projeto
--- novo/zerado. Depois disso, rode também (nesta ordem):
---   1. supabase/migrations/add_affiliate_id_to_user_ecommerce.sql (no-op
---      aqui, já está embutido abaixo, mas não tem problema rodar de novo)
---   2. supabase/migrations/add_price_comparisons.sql (idem, já embutido)
---   3. supabase/migrations/add_pickup_info_to_orders.sql (idem, já embutido)
+-- novo/zerado. Depois disso, rode também (nesta ordem, embora já estejam
+-- embutidas aqui — não tem problema rodar de novo):
+--   1. supabase/migrations/add_affiliate_id_to_user_ecommerce.sql
+--   2. supabase/migrations/add_pickup_info_to_orders.sql
 --
 -- IMPORTANTE — leia antes de rodar:
 -- 1. Toda tabela tem RLS habilitado com uma policy permissiva ("allow all").
@@ -319,29 +318,6 @@ create table if not exists stock_movements (
 create index if not exists idx_stock_movements_product_id on stock_movements(product_id, created_at desc);
 
 -- =====================================================================
--- 10. price_comparisons — inteligência de preço (ERP)
--- ATENÇÃO: hoje compara com Petlove/Cobasi/Petz (herança do tema pet
--- shop). Precisa ser revisado para concorrentes de Apple/iPhone quando
--- essa feature for adaptada — ver conversa anterior sobre o catálogo.
--- =====================================================================
-
-create table if not exists price_comparisons (
-  id uuid primary key default gen_random_uuid(),
-  product_id uuid references products(id) on delete cascade unique,
-  product_name text not null,
-  our_price numeric(10,2),
-  petlove_price numeric(10,2),
-  cobasi_price numeric(10,2),
-  petz_price numeric(10,2),
-  cheapest_competitor numeric(10,2),
-  difference_amount numeric(10,2),
-  difference_percentage numeric(6,2),
-  alert_type text default 'no_data', -- expensive | cheap | competitive | no_data | error
-  note text,
-  checked_at timestamptz default now()
-);
-
--- =====================================================================
 -- 11. affiliate_product_commissions — comissão customizada por produto
 -- =====================================================================
 
@@ -606,7 +582,7 @@ begin
   foreach t in array array[
     'admin_users', 'affiliates', 'affiliate_users', 'user_ecommerce',
     'products', 'product_images', 'product_details', 'product_variant_types',
-    'product_variants', 'stock_movements', 'price_comparisons',
+    'product_variants', 'stock_movements',
     'affiliate_product_commissions', 'orders', 'order_items', 'payments',
     'coupons', 'coupon_usage', 'affiliate_sales', 'affiliate_withdrawals',
     'platform_config'

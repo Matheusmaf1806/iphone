@@ -41,11 +41,6 @@ export default function GestaoLayout({ children, session }) {
       label: 'Usuários',
       path: '/gestao/erp/usuarios',
     },
-    {
-      icon: 'fa-chart-line',
-      label: 'Preços IA',
-      path: '/gestao/erp/inteligencia-precos',
-    },
   ];
 
   const handleLogout = async () => {
