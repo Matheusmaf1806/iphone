@@ -9,6 +9,7 @@
 --   1. supabase/migrations/add_affiliate_id_to_user_ecommerce.sql
 --   2. supabase/migrations/add_pickup_info_to_orders.sql
 --   3. supabase/migrations/add_product_variant_system.sql
+--   4. supabase/migrations/add_currency_and_import_tax.sql
 --
 -- IMPORTANTE — leia antes de rodar:
 -- 1. Toda tabela tem RLS habilitado com uma policy permissiva ("allow all").
@@ -199,6 +200,8 @@ create table if not exists products (
   image_url text,
   price numeric(10,2),
   cost_price numeric(10,2), -- pode ser null quando has_variants=true (custo vive em cada SKU)
+  cost_currency text not null default 'BRL' check (cost_currency in ('BRL', 'USD')),
+  import_tax_percentage numeric(5,2), -- null = usa platform_config.default_import_tax_percentage
   supplier_margin_percentage numeric(5,2) not null default 10,
   compare_at_price numeric(10,2),
   sku text,
@@ -282,6 +285,8 @@ create table if not exists product_variants (
   sku text,
   attributes jsonb not null default '{}'::jsonb, -- ex: {"Cor":"Titânio Azul","Armazenamento":"256GB"}
   cost_price numeric(10,2),                      -- custo real do SKU (cada capacidade custa diferente)
+  cost_currency text not null default 'BRL' check (cost_currency in ('BRL', 'USD')),
+  import_tax_percentage numeric(5,2),            -- null = usa platform_config.default_import_tax_percentage
   supplier_margin_percentage numeric(5,2),        -- opcional: se nulo, herda a margem do produto
   price_adjustment numeric(10,2) default 0,       -- legado, não usado por produtos com has_variants
   price_adjustment_type text default 'fixed',     -- fixed | percentage
@@ -457,6 +462,8 @@ create table if not exists order_items (
   supplier_amount_unit numeric(10,2) not null,
   affiliate_amount_unit numeric(10,2) not null,
   card_fee_amount_unit numeric(10,2) not null default 0,
+  exchange_rate_used numeric(10,4),        -- cotação USD->BRL usada, quando o custo era em dólar
+  import_tax_percentage_used numeric(5,2), -- imposto (%) efetivamente aplicado neste item
   created_at timestamptz default now()
 );
 
@@ -574,7 +581,9 @@ create table if not exists platform_config (
 insert into platform_config (key, value, description) values
   ('card_fee_percentage', '9.68', 'Taxa de custo do cartão de crédito (%)'),
   ('pix_discount_percentage', '5', 'Desconto oferecido para pagamento via PIX (%)'),
-  ('default_affiliate_margin', '10', 'Margem padrão de afiliado quando não configurada (%)')
+  ('default_affiliate_margin', '10', 'Margem padrão de afiliado quando não configurada (%)'),
+  ('usd_brl_rate', '5.50', 'Cotação USD -> BRL usada para converter custos cadastrados em dólar'),
+  ('default_import_tax_percentage', '0', 'Imposto de importação padrão (%) aplicado sobre o custo, quando o produto/SKU não tiver um valor próprio')
 on conflict (key) do nothing;
 
 -- =====================================================================

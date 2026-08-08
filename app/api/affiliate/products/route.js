@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getAffiliateSession } from '../../../../lib/affiliateAuth';
 import { createServerClient } from '../../../../lib/supabase/server';
-import { calculateAllPrices } from '../../../../lib/pricing';
+import { calculateAllPrices, resolveCostPriceBRL } from '../../../../lib/pricing';
+import { getPlatformConfig } from '../../../../lib/affiliateTracking';
 
 // Forçar rota dinâmica (usa cookies)
 export const dynamic = 'force-dynamic';
@@ -41,22 +42,22 @@ export async function GET() {
       );
     }
 
-    // Buscar configuração da taxa de cartão
-    const { data: config } = await supabase
-      .from('platform_config')
-      .select('value')
-      .eq('key', 'card_fee_percentage')
-      .single();
-
-    const cardFeePercentage = parseFloat(config?.value || 9.68);
+    const config = await getPlatformConfig();
 
     // Calcular preços com a margem do afiliado
     const productsWithPrices = products.map(product => {
-      const prices = calculateAllPrices({
+      const costPriceBRL = resolveCostPriceBRL({
         costPrice: parseFloat(product.cost_price),
+        costCurrency: product.cost_currency,
+        importTaxPercentage: product.import_tax_percentage,
+        usdBrlRate: config.usdBrlRate,
+        defaultImportTaxPercentage: config.defaultImportTaxPercentage,
+      });
+      const prices = calculateAllPrices({
+        costPrice: costPriceBRL,
         supplierMarginPercentage: parseFloat(product.supplier_margin_percentage),
         affiliateMarginPercentage: parseFloat(session.commissionPercentage),
-        cardFeePercentage,
+        cardFeePercentage: config.cardFeePercentage,
       });
 
       // Calcular comissão unitária

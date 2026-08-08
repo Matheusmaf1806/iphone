@@ -10,7 +10,7 @@ import PromoBanner from '../components/PromoBanner';
 import TestimonialsSection from '../components/TestimonialsSection';
 import { getCurrentContext } from '../lib/affiliateTracking';
 import { createServerClient } from '../lib/supabase/server';
-import { calculateAllPrices } from '../lib/pricing';
+import { calculateAllPrices, resolveCostPriceBRL } from '../lib/pricing';
 
 const CAROUSEL_CATEGORIES = ['iphone', 'mac', 'apple-watch', 'airpods', 'acessorios'];
 
@@ -69,8 +69,15 @@ export default async function Home() {
             const affiliateMargin = parseFloat(affiliate?.commission_percentage) || config.defaultAffiliateMargin;
 
             if (costPrice > 0) {
-              const prices = calculateAllPrices({
+              const costPriceBRL = resolveCostPriceBRL({
                 costPrice,
+                costCurrency: product.cost_currency,
+                importTaxPercentage: product.import_tax_percentage,
+                usdBrlRate: config.usdBrlRate,
+                defaultImportTaxPercentage: config.defaultImportTaxPercentage,
+              });
+              const prices = calculateAllPrices({
+                costPrice: costPriceBRL,
                 supplierMarginPercentage: supplierMargin,
                 affiliateMarginPercentage: affiliateMargin,
                 cardFeePercentage: config.cardFeePercentage,
