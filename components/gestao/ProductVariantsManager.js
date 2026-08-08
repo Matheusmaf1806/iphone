@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import Loader from '../Loader';
+import { resolveCostPriceBRL } from '../../lib/pricing';
 
 // Gera um sufixo de SKU legível a partir dos valores do atributo, ex: {"Cor":"Titânio Azul","Armazenamento":"256GB"} -> "TITAZU-256GB"
 function suggestSkuSuffix(attributes) {
@@ -39,6 +40,7 @@ export default function ProductVariantsManager({ productId, productName, product
   const [newValueDrafts, setNewValueDrafts] = useState({}); // { [typeId]: { value, swatch_hex } }
   const [bulkCost, setBulkCost] = useState('');
   const [bulkStock, setBulkStock] = useState('');
+  const [platformConfig, setPlatformConfig] = useState({ usdBrlRate: 5.5, defaultImportTaxPercentage: 0 });
 
   useEffect(() => {
     loadData();
@@ -49,12 +51,22 @@ export default function ProductVariantsManager({ productId, productName, product
     setLoading(true);
     setError('');
     try {
-      const [typesRes, variantsRes] = await Promise.all([
+      const [typesRes, variantsRes, configRes] = await Promise.all([
         fetch('/api/product-variant-types?withValues=true'),
         fetch(`/api/product-variants?productId=${productId}`),
+        fetch('/api/platform-config'),
       ]);
       const typesData = await typesRes.json();
       const variantsData = await variantsRes.json();
+      const configData = await configRes.json();
+
+      if (configData.success) {
+        const byKey = Object.fromEntries(configData.data.map(c => [c.key, parseFloat(c.value)]));
+        setPlatformConfig({
+          usdBrlRate: byKey.usd_brl_rate || 5.5,
+          defaultImportTaxPercentage: byKey.default_import_tax_percentage || 0,
+        });
+      }
 
       const types = typesData.success ? typesData.data : [];
       setAxisTypes(types);
@@ -85,6 +97,8 @@ export default function ProductVariantsManager({ productId, productName, product
         id: v.id,
         attributes: v.attributes || {},
         cost_price: v.cost_price ?? '',
+        cost_currency: v.cost_currency || 'BRL',
+        import_tax_percentage: v.import_tax_percentage ?? '',
         supplier_margin_percentage: v.supplier_margin_percentage ?? '',
         stock_quantity: v.stock_quantity ?? 0,
         low_stock_threshold: v.low_stock_threshold ?? 10,
@@ -203,6 +217,8 @@ export default function ProductVariantsManager({ productId, productName, product
         id: null,
         attributes: combo,
         cost_price: '',
+        cost_currency: 'BRL',
+        import_tax_percentage: '',
         supplier_margin_percentage: '',
         stock_quantity: 0,
         low_stock_threshold: 10,
@@ -257,6 +273,10 @@ export default function ProductVariantsManager({ productId, productName, product
     setRows(prev => prev.map(r => ({ ...r, cost_price: bulkCost })));
   };
 
+  const applyBulkCurrency = (currency) => {
+    setRows(prev => prev.map(r => ({ ...r, cost_currency: currency })));
+  };
+
   const applyBulkStock = () => {
     if (bulkStock === '') return;
     setRows(prev => prev.map(r => ({ ...r, stock_quantity: bulkStock })));
@@ -300,6 +320,8 @@ export default function ProductVariantsManager({ productId, productName, product
           sku: r.sku,
           attributes: r.attributes,
           cost_price: parseFloat(r.cost_price) || null,
+          cost_currency: r.cost_currency || 'BRL',
+          import_tax_percentage: r.import_tax_percentage !== '' && r.import_tax_percentage != null ? parseFloat(r.import_tax_percentage) : null,
           supplier_margin_percentage: r.supplier_margin_percentage ? parseFloat(r.supplier_margin_percentage) : null,
           stock_quantity: parseInt(r.stock_quantity) || 0,
           low_stock_threshold: parseInt(r.low_stock_threshold) || 10,
@@ -460,6 +482,13 @@ export default function ProductVariantsManager({ productId, productName, product
                 <h3 className="font-semibold">SKUs ({rows.length})</h3>
                 <div className="flex gap-2 items-end flex-wrap">
                   <div>
+                    <label className="block text-xs text-gray-500">Moeda de todos</label>
+                    <div className="flex gap-1">
+                      <button type="button" onClick={() => applyBulkCurrency('BRL')} className="px-2 py-1 text-xs bg-gray-200 rounded hover:bg-gray-300">R$</button>
+                      <button type="button" onClick={() => applyBulkCurrency('USD')} className="px-2 py-1 text-xs bg-gray-200 rounded hover:bg-gray-300">US$</button>
+                    </div>
+                  </div>
+                  <div>
                     <label className="block text-xs text-gray-500">Aplicar custo a todos</label>
                     <div className="flex gap-1">
                       <input type="number" step="0.01" value={bulkCost} onChange={(e) => setBulkCost(e.target.value)} className="w-24 px-2 py-1 text-sm border rounded" placeholder="R$" />
@@ -484,7 +513,8 @@ export default function ProductVariantsManager({ productId, productName, product
                         <th key={name} className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{name}</th>
                       ))}
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">SKU</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Custo (R$)</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Custo</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Imposto (%)</th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Margem (%)</th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Estoque</th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Foto</th>
@@ -503,7 +533,21 @@ export default function ProductVariantsManager({ productId, productName, product
                           <input type="text" value={row.sku} onChange={(e) => updateRow(row._key, 'sku', e.target.value)} className="w-32 px-2 py-1 border rounded text-xs font-mono" />
                         </td>
                         <td className="px-3 py-2">
-                          <input type="number" step="0.01" min="0" value={row.cost_price} onChange={(e) => updateRow(row._key, 'cost_price', e.target.value)} className="w-24 px-2 py-1 border rounded" placeholder="obrigatório" />
+                          <div className="flex gap-1 items-start">
+                            <select value={row.cost_currency} onChange={(e) => updateRow(row._key, 'cost_currency', e.target.value)} className="px-1 py-1 border rounded text-xs">
+                              <option value="BRL">R$</option>
+                              <option value="USD">US$</option>
+                            </select>
+                            <div>
+                              <input type="number" step="0.01" min="0" value={row.cost_price} onChange={(e) => updateRow(row._key, 'cost_price', e.target.value)} className="w-20 px-2 py-1 border rounded" placeholder="obrigatório" />
+                              {row.cost_currency === 'USD' && row.cost_price && (
+                                <p className="text-[10px] text-gray-500 mt-0.5">≈ R$ {(parseFloat(row.cost_price) * platformConfig.usdBrlRate).toFixed(2)}</p>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2">
+                          <input type="number" step="0.01" min="0" value={row.import_tax_percentage} onChange={(e) => updateRow(row._key, 'import_tax_percentage', e.target.value)} className="w-16 px-2 py-1 border rounded" placeholder={`${platformConfig.defaultImportTaxPercentage} (padrão)`} />
                         </td>
                         <td className="px-3 py-2">
                           <input type="number" step="0.01" min="0" max="100" value={row.supplier_margin_percentage} onChange={(e) => updateRow(row._key, 'supplier_margin_percentage', e.target.value)} className="w-20 px-2 py-1 border rounded" placeholder={defaultMargin ? `${defaultMargin} (padrão)` : 'padrão'} />

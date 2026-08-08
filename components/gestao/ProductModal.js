@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import ProductVariantsManager from './ProductVariantsManager';
 import Loader from '../Loader';
+import { resolveCostPriceBRL } from '../../lib/pricing';
 
 const MAX_IMAGES = 4;
 
@@ -32,6 +33,8 @@ export default function ProductModal({ product, onClose, onSave }) {
     category: product?.category || '',
     image_url: product?.image_url || '',
     cost_price: product?.cost_price || '',
+    cost_currency: product?.cost_currency || 'BRL',
+    import_tax_percentage: product?.import_tax_percentage ?? '',
     supplier_margin_percentage: product?.supplier_margin_percentage || 10,
     sku: product?.sku || '',
     stock_type: product?.stock_type || 'unlimited',
@@ -53,14 +56,41 @@ export default function ProductModal({ product, onClose, onSave }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [generatingDesc, setGeneratingDesc] = useState(false);
+  const [platformConfig, setPlatformConfig] = useState({ usdBrlRate: 5.5, defaultImportTaxPercentage: 0 });
+
+  useEffect(() => {
+    fetch('/api/platform-config')
+      .then(res => res.json())
+      .then(data => {
+        if (!data.success) return;
+        const byKey = Object.fromEntries(data.data.map(c => [c.key, parseFloat(c.value)]));
+        setPlatformConfig({
+          usdBrlRate: byKey.usd_brl_rate || 5.5,
+          defaultImportTaxPercentage: byKey.default_import_tax_percentage || 0,
+        });
+      })
+      .catch(() => {});
+  }, []);
+
+  // Custo já convertido pra BRL (se cadastrado em dólar) + imposto somado
+  const effectiveCostPriceBRL = () => {
+    if (!formData.cost_price) return 0;
+    return resolveCostPriceBRL({
+      costPrice: parseFloat(formData.cost_price),
+      costCurrency: formData.cost_currency,
+      importTaxPercentage: formData.import_tax_percentage !== '' ? parseFloat(formData.import_tax_percentage) : null,
+      usdBrlRate: platformConfig.usdBrlRate,
+      defaultImportTaxPercentage: platformConfig.defaultImportTaxPercentage,
+    });
+  };
 
   // Calcular preço de venda automaticamente
   const calculateSalePrice = () => {
     if (!formData.cost_price || !formData.supplier_margin_percentage) return 0;
-    const costPrice = parseFloat(formData.cost_price);
+    const costPriceBRL = effectiveCostPriceBRL();
     const margin = parseFloat(formData.supplier_margin_percentage);
-    // Fórmula: Preço de Venda = Custo / (1 - Margem/100)
-    const salePrice = costPrice / (1 - margin / 100);
+    // Fórmula: Preço de Venda = Custo (BRL, com imposto) / (1 - Margem/100)
+    const salePrice = costPriceBRL / (1 - margin / 100);
     return salePrice;
   };
 
@@ -231,6 +261,8 @@ export default function ProductModal({ product, onClose, onSave }) {
         image_url: mainImageUrl,
         price: formData.has_variants ? null : salePrice, // p/ produtos com variantes, calculado ao salvar os SKUs
         cost_price: formData.has_variants ? null : (formData.cost_price ? parseFloat(formData.cost_price) : null),
+        cost_currency: formData.has_variants ? 'BRL' : formData.cost_currency,
+        import_tax_percentage: formData.has_variants ? null : (formData.import_tax_percentage !== '' ? parseFloat(formData.import_tax_percentage) : null),
         supplier_margin_percentage: parseFloat(formData.supplier_margin_percentage),
         sku: formData.sku || null,
         has_variants: formData.has_variants,
@@ -695,23 +727,54 @@ export default function ProductModal({ product, onClose, onSave }) {
                     ) : null}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Preço de Custo (R$) <span className="text-red-500">*</span>
+                        Preço de Custo <span className="text-red-500">*</span>
+                      </label>
+                      <div className="flex gap-2">
+                        <select
+                          name="cost_currency"
+                          value={formData.cost_currency}
+                          onChange={handleChange}
+                          className="px-2 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                        >
+                          <option value="BRL">R$</option>
+                          <option value="USD">US$</option>
+                        </select>
+                        <input
+                          type="number"
+                          name="cost_price"
+                          value={formData.cost_price}
+                          onChange={handleChange}
+                          required
+                          step="0.01"
+                          min="0"
+                          placeholder="35.00"
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                        />
+                      </div>
+                      <p className="text-xs text-gray-600 mt-1">
+                        {formData.cost_currency === 'USD' && formData.cost_price
+                          ? `≈ R$ ${(parseFloat(formData.cost_price) * platformConfig.usdBrlRate).toFixed(2)} (cotação R$ ${platformConfig.usdBrlRate.toFixed(2)})`
+                          : 'Custo base do produto'}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Imposto de Importação (%)
                       </label>
                       <input
                         type="number"
-                        name="cost_price"
-                        value={formData.cost_price}
+                        name="import_tax_percentage"
+                        value={formData.import_tax_percentage}
                         onChange={handleChange}
-                        required
                         step="0.01"
                         min="0"
-                        placeholder="35.00"
+                        placeholder={`padrão: ${platformConfig.defaultImportTaxPercentage}%`}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                       />
-                      <p className="text-xs text-gray-600 mt-1">Custo base do produto</p>
+                      <p className="text-xs text-gray-600 mt-1">Em branco = usa o padrão global</p>
                     </div>
                   </div>
                 )}
@@ -835,7 +898,9 @@ export default function ProductModal({ product, onClose, onSave }) {
                       <div>
                         <p className="text-sm font-medium text-gray-700">💰 Preço de Venda (Calculado Automaticamente)</p>
                         <p className="text-xs text-gray-500 mt-0.5">
-                          Fórmula: R$ {formData.cost_price} / (1 - {formData.supplier_margin_percentage}%) = R$ {salePrice.toFixed(2)}
+                          Fórmula: R$ {effectiveCostPriceBRL().toFixed(2)}
+                          {formData.cost_currency === 'USD' || formData.import_tax_percentage ? ' (custo já convertido + imposto)' : ''}
+                          {' '}/ (1 - {formData.supplier_margin_percentage}%) = R$ {salePrice.toFixed(2)}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
                           📦 Parcelamento: até 21x de R$ {(salePrice / 21).toFixed(2)} sem juros
@@ -846,7 +911,7 @@ export default function ProductModal({ product, onClose, onSave }) {
                           R$ {salePrice.toFixed(2)}
                         </p>
                         <p className="text-xs text-gray-600 mt-1">
-                          Lucro: R$ {(salePrice - parseFloat(formData.cost_price || 0)).toFixed(2)}
+                          Lucro: R$ {(salePrice - effectiveCostPriceBRL()).toFixed(2)}
                         </p>
                       </div>
                     </div>

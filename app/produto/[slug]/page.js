@@ -9,7 +9,7 @@ import FeaturedProducts from '../../../components/FeaturedProducts';
 import ComboSuggestion from '../../../components/CrossSellCarousel';
 import { getProduct, getRelatedProducts, getCrossSellProducts } from '../../../lib/products';
 import { getCurrentContext } from '../../../lib/affiliateTracking';
-import { calculateAllPrices } from '../../../lib/pricing';
+import { calculateAllPrices, resolveCostPriceBRL } from '../../../lib/pricing';
 
 // Category display names
 const CATEGORY_NAMES = {
@@ -23,9 +23,16 @@ const CATEGORY_NAMES = {
   'promocoes': 'Promoções',
 };
 
-function priceOne(costPrice, supplierMarginPercentage, affiliate, config) {
-  return calculateAllPrices({
+function priceOne({ costPrice, costCurrency, importTaxPercentage, supplierMarginPercentage }, affiliate, config) {
+  const costPriceBRL = resolveCostPriceBRL({
     costPrice,
+    costCurrency,
+    importTaxPercentage,
+    usdBrlRate: config.usdBrlRate,
+    defaultImportTaxPercentage: config.defaultImportTaxPercentage,
+  });
+  return calculateAllPrices({
+    costPrice: costPriceBRL,
     supplierMarginPercentage,
     affiliateMarginPercentage: affiliate?.commission_percentage || config.defaultAffiliateMargin,
     cardFeePercentage: config.cardFeePercentage,
@@ -35,7 +42,12 @@ function priceOne(costPrice, supplierMarginPercentage, affiliate, config) {
 function applyPrices(product, affiliate, config) {
   let p = { ...product };
   if (product.costPrice) {
-    const prices = priceOne(product.costPrice, product.supplierMarginPercentage, affiliate, config);
+    const prices = priceOne({
+      costPrice: product.costPrice,
+      costCurrency: product.costCurrency,
+      importTaxPercentage: product.importTaxPercentage,
+      supplierMarginPercentage: product.supplierMarginPercentage,
+    }, affiliate, config);
     p.pixPrice = prices.pixPrice;
     p.cardPrice = prices.finalPrice;
     p.displayPrice = prices.pixPrice;
@@ -47,18 +59,18 @@ function applyPrices(product, affiliate, config) {
     p.cardPrice = product.price;
   }
 
-  // Cada SKU tem seu próprio custo (e, opcionalmente, sua própria margem) — precifica
-  // cada variante individualmente reaproveitando a mesma cascata de preço do produto.
+  // Cada SKU tem seu próprio custo (moeda + imposto podem ser próprios também) —
+  // precifica cada variante individualmente reaproveitando a mesma cascata de preço.
   if (product.hasVariants && product.variants?.length > 0) {
     p.variants = product.variants
       .filter(v => v.costPrice != null && v.costPrice > 0)
       .map(v => {
-        const prices = priceOne(
-          v.costPrice,
-          v.supplierMarginPercentage ?? product.supplierMarginPercentage,
-          affiliate,
-          config
-        );
+        const prices = priceOne({
+          costPrice: v.costPrice,
+          costCurrency: v.costCurrency,
+          importTaxPercentage: v.importTaxPercentage,
+          supplierMarginPercentage: v.supplierMarginPercentage ?? product.supplierMarginPercentage,
+        }, affiliate, config);
         return {
           ...v,
           pixPrice: prices.pixPrice,

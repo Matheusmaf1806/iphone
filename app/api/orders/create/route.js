@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '../../../../lib/supabase/server';
-import { calculateAllPrices } from '../../../../lib/pricing';
+import { calculateAllPrices, resolveCostPriceBRL } from '../../../../lib/pricing';
 import { getPlatformConfig } from '../../../../lib/affiliateTracking';
 import { registerCouponUsage } from '../../../../lib/coupons';
 import { updateStock, updateVariantStock } from '../../../../lib/products';
@@ -65,7 +65,7 @@ export async function POST(request) {
 
     const { data: products } = await supabase
       .from('products')
-      .select('id, name, cost_price, supplier_margin_percentage, stock_type, stock_quantity')
+      .select('id, name, cost_price, cost_currency, import_tax_percentage, supplier_margin_percentage, stock_type, stock_quantity')
       .in('id', productIds);
     const productMap = Object.fromEntries((products || []).map(p => [p.id, p]));
 
@@ -73,7 +73,7 @@ export async function POST(request) {
     if (variantIds.length > 0) {
       const { data: variants } = await supabase
         .from('product_variants')
-        .select('id, product_id, sku, attributes, cost_price, supplier_margin_percentage, stock_quantity, is_active')
+        .select('id, product_id, sku, attributes, cost_price, cost_currency, import_tax_percentage, supplier_margin_percentage, stock_quantity, is_active')
         .in('id', variantIds);
       variantMap = Object.fromEntries((variants || []).map(v => [v.id, v]));
     }
@@ -118,10 +118,21 @@ export async function POST(request) {
       const product = productMap[item.productId];
       const variant = item.variantId ? variantMap[item.variantId] : null;
 
-      const costPrice = parseFloat(variant ? variant.cost_price : product.cost_price);
+      const rawCostPrice = parseFloat(variant ? variant.cost_price : product.cost_price);
+      const costCurrency = (variant ? variant.cost_currency : product.cost_currency) || 'BRL';
+      const importTaxPercentage = variant?.import_tax_percentage ?? product.import_tax_percentage;
       const supplierMarginPercentage = parseFloat(
         (variant?.supplier_margin_percentage ?? product.supplier_margin_percentage)
       );
+
+      const costPrice = resolveCostPriceBRL({
+        costPrice: rawCostPrice,
+        costCurrency,
+        importTaxPercentage,
+        usdBrlRate: config.usdBrlRate,
+        defaultImportTaxPercentage: config.defaultImportTaxPercentage,
+      });
+      const effectiveTaxPercentage = importTaxPercentage != null ? importTaxPercentage : config.defaultImportTaxPercentage;
 
       // Use customMarkup from agent if provided, otherwise use affiliate commission or default
       const affiliateMargin = (item.customMarkup !== null && item.customMarkup !== undefined)
@@ -157,6 +168,8 @@ export async function POST(request) {
         product_name: product.name,
         quantity: item.quantity,
         cost_price: prices.costPrice,
+        exchange_rate_used: costCurrency === 'USD' ? config.usdBrlRate : null,
+        import_tax_percentage_used: effectiveTaxPercentage || 0,
         supplier_margin_percentage: supplierMarginPercentage,
         affiliate_margin_percentage: affiliateMargin,
         card_fee_percentage: isPix ? 0 : config.cardFeePercentage,

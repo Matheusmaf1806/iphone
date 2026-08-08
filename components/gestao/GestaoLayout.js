@@ -41,6 +41,11 @@ export default function GestaoLayout({ children, session }) {
       label: 'Usuários',
       path: '/gestao/erp/usuarios',
     },
+    {
+      icon: 'fa-sliders-h',
+      label: 'Configurações',
+      path: '/gestao/erp/configuracoes',
+    },
   ];
 
   const handleLogout = async () => {
