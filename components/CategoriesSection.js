@@ -216,10 +216,9 @@ export default function CategoriesSection() {
 
         @media (min-width: 860px) {
           .cat-card {
-            aspect-ratio: 3 / 4;
             min-height: 0;
             flex: initial;
-            padding: 38px 14px 26px;
+            padding: 36px 14px 28px;
           }
         }
 
