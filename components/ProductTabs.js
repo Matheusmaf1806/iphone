@@ -3,8 +3,28 @@ import { useAffiliate } from '../contexts/AffiliateContext';
 
 import { useState } from 'react';
 
+const FAQ_ITEMS = [
+  {
+    question: 'Como funciona a retirada em Orlando?',
+    answer: 'Não há entrega no Brasil — a compra é retirada pessoalmente em Orlando. No checkout você informa a data prevista da sua viagem, e no momento da retirada é preciso apresentar passaporte e passagem aérea.',
+  },
+  {
+    question: 'Quais formas de pagamento vocês aceitam?',
+    answer: 'PIX (com desconto), cartão de crédito parcelado em até 21x sem juros, e PayPal.',
+  },
+  {
+    question: 'Por que o PIX é mais barato que o cartão?',
+    answer: 'Pagamentos no cartão têm uma taxa de operadora repassada no preço; no PIX essa taxa não existe, então o desconto reflete essa economia real.',
+  },
+  {
+    question: 'O aparelho tem garantia?',
+    answer: 'Sim, todo iPhone vendido é original Apple e mantém a garantia internacional do fabricante.',
+  },
+];
+
 export default function ProductTabs({ product }) {
   const [activeTab, setActiveTab] = useState('description');
+  const [openFaqIndex, setOpenFaqIndex] = useState(0);
   const affiliate = useAffiliate();
 
   const hasDetails = product.details && Object.keys(product.details).length > 0;
@@ -32,6 +52,16 @@ export default function ProductTabs({ product }) {
             onClick={() => setActiveTab('reviews')}
           >
             Avaliações ({product.reviews || 0})
+          </button>
+          <button
+            className={`px-6 py-3 font-medium border-b-2 transition-colors ${
+              activeTab === 'faq'
+                ? 'border-custom-yellow text-gray-900'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+            onClick={() => setActiveTab('faq')}
+          >
+            Perguntas Frequentes
           </button>
         </div>
 
@@ -130,6 +160,31 @@ export default function ProductTabs({ product }) {
                 <p className="text-gray-500">Nenhuma avaliação ainda. Seja o primeiro a avaliar!</p>
               </div>
             )}
+          </div>
+        )}
+
+        {activeTab === 'faq' && (
+          <div className="space-y-2">
+            {FAQ_ITEMS.map((item, index) => {
+              const isOpen = openFaqIndex === index;
+              return (
+                <div key={item.question} className="border border-gray-200 rounded-lg overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setOpenFaqIndex(isOpen ? -1 : index)}
+                    className="w-full flex items-center justify-between gap-4 px-4 py-3.5 text-left bg-gray-50 hover:bg-gray-100 transition-colors"
+                  >
+                    <span className="font-medium text-gray-900">{item.question}</span>
+                    <i className={`fas fa-chevron-down text-gray-400 text-sm transition-transform ${isOpen ? 'rotate-180' : ''}`}></i>
+                  </button>
+                  {isOpen && (
+                    <div className="px-4 py-3.5 text-sm text-gray-600 leading-relaxed">
+                      {item.answer}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

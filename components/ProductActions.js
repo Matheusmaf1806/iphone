@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useCart } from '../contexts/CartContext';
 import { useAffiliate } from '../contexts/AffiliateContext';
 
@@ -25,10 +26,11 @@ function findMatchingVariant(variants, selected) {
   return variants.find(v => Object.entries(selected).every(([key, value]) => v.attributes[key] === value)) || null;
 }
 
-export default function ProductActions({ product }) {
+export default function ProductActions({ product, onVariantChange }) {
   const [quantity, setQuantity] = useState(1);
   const { addToCart: addToCartContext, setIsOpen } = useCart();
   const affiliate = useAffiliate();
+  const router = useRouter();
 
   const hasVariants = !!(product.hasVariants && product.variants && product.variants.length > 0);
   const axisOptions = useMemo(() => (hasVariants ? buildAxisOptions(product.variants) : []), [hasVariants, product.variants]);
@@ -49,6 +51,12 @@ export default function ProductActions({ product }) {
   const outOfStock = !!(selectedVariant && selectedVariant.stockQuantity <= 0);
   const canAddToCart = hasVariants ? !!(selectedVariant && !outOfStock) : true;
 
+  // Avisa o componente pai (a galeria de fotos) qual variante está selecionada, pra
+  // trocar a foto principal quando o SKU escolhido tiver imagem própria.
+  useEffect(() => {
+    onVariantChange?.(selectedVariant);
+  }, [selectedVariant, onVariantChange]);
+
   const selectAttribute = (axisName, value) => {
     setSelectedAttributes(prev => ({ ...prev, [axisName]: value }));
   };
@@ -60,13 +68,13 @@ export default function ProductActions({ product }) {
     }
   };
 
-  const displayPrice = hasVariants ? (selectedVariant?.pixPrice ?? null) : product.price;
-  const displayInstallmentValue = hasVariants ? (selectedVariant?.installmentValue ?? null) : null;
+  const displayPrice = hasVariants ? (selectedVariant?.pixPrice ?? null) : product.pixPrice ?? product.price;
+  const displayCardPrice = hasVariants ? (selectedVariant?.cardPrice ?? null) : product.cardPrice;
+  const hasPixDiscount = displayPrice != null && displayCardPrice != null && (displayCardPrice - displayPrice) > 0.01;
+  const pixDiscountPercent = hasPixDiscount ? Math.round(((displayCardPrice - displayPrice) / displayCardPrice) * 100) : 0;
 
-  const addToCart = () => {
-    if (!canAddToCart) return;
-
-    const cartProduct = hasVariants
+  const buildCartProduct = () => (
+    hasVariants
       ? {
           ...product,
           price: selectedVariant.pixPrice,
@@ -81,13 +89,21 @@ export default function ProductActions({ product }) {
           sku: selectedVariant.sku,
           attributes: selectedVariant.attributes,
         }
-      : product;
+      : product
+  );
 
-    addToCartContext(cartProduct, quantity);
-
+  const addToCart = () => {
+    if (!canAddToCart) return;
+    addToCartContext(buildCartProduct(), quantity);
     setTimeout(() => {
       setIsOpen(true);
     }, 100);
+  };
+
+  const buyNow = () => {
+    if (!canAddToCart) return;
+    addToCartContext(buildCartProduct(), quantity);
+    router.push('/checkout');
   };
 
   const totalPrice = (displayPrice || 0) * quantity;
@@ -97,51 +113,71 @@ export default function ProductActions({ product }) {
     <>
       {hasVariants && (
         <div className="mb-6 space-y-4">
-          {axisOptions.map(axis => (
-            <div key={axis.name}>
-              <p className="text-sm font-semibold text-gray-700 mb-2">
-                {axis.name}
-                {selectedAttributes[axis.name] && (
-                  <span className="font-normal text-gray-500"> — {selectedAttributes[axis.name]}</span>
-                )}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {axis.values.map(value => {
-                  const isSelected = selectedAttributes[axis.name] === value;
-                  const swatchHex = product.variantSwatches?.[axis.name]?.[value];
-                  const wouldMatch = findMatchingVariant(product.variants, { ...selectedAttributes, [axis.name]: value });
-                  const disabled = !wouldMatch;
-                  const isSoldOut = wouldMatch && wouldMatch.stockQuantity <= 0;
+          {axisOptions.map(axis => {
+            const isColorAxis = axis.values.some(v => product.variantSwatches?.[axis.name]?.[v]);
 
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => !disabled && selectAttribute(axis.name, value)}
-                      disabled={disabled}
-                      title={isSoldOut ? `${value} — esgotado` : value}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
-                        isSelected
-                          ? 'border-gray-900 bg-gray-900 text-white'
-                          : disabled
-                          ? 'border-gray-200 text-gray-300 cursor-not-allowed'
-                          : 'border-gray-300 text-gray-700 hover:border-gray-500'
-                      } ${isSoldOut && !isSelected ? 'opacity-50' : ''}`}
-                    >
-                      {swatchHex && (
-                        <span
-                          className="w-4 h-4 rounded-full border border-gray-300 flex-shrink-0"
+            return (
+              <div key={axis.name}>
+                <p className="text-sm font-semibold text-gray-700 mb-2">
+                  {axis.name}
+                  {selectedAttributes[axis.name] && (
+                    <span className="font-normal text-gray-500"> — {selectedAttributes[axis.name]}</span>
+                  )}
+                </p>
+                <div className="flex flex-wrap gap-2.5">
+                  {axis.values.map(value => {
+                    const isSelected = selectedAttributes[axis.name] === value;
+                    const swatchHex = product.variantSwatches?.[axis.name]?.[value];
+                    const wouldMatch = findMatchingVariant(product.variants, { ...selectedAttributes, [axis.name]: value });
+                    const disabled = !wouldMatch;
+                    const isSoldOut = wouldMatch && wouldMatch.stockQuantity <= 0;
+
+                    if (isColorAxis && swatchHex) {
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => !disabled && selectAttribute(axis.name, value)}
+                          disabled={disabled}
+                          title={isSoldOut ? `${value} — esgotado` : value}
+                          className={`relative w-10 h-10 rounded-full flex-shrink-0 transition-all ${
+                            isSelected ? 'ring-2 ring-offset-2 ring-gray-900' : 'ring-1 ring-offset-1 ring-gray-300 hover:ring-gray-500'
+                          } ${disabled ? 'opacity-30 cursor-not-allowed' : ''}`}
                           style={{ backgroundColor: swatchHex }}
-                        />
-                      )}
-                      {value}
-                      {isSoldOut && <span className="text-xs">(esgotado)</span>}
-                    </button>
-                  );
-                })}
+                        >
+                          {isSoldOut && (
+                            <span className="absolute inset-0 flex items-center justify-center">
+                              <span className="w-full h-px bg-white rotate-45" />
+                            </span>
+                          )}
+                        </button>
+                      );
+                    }
+
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => !disabled && selectAttribute(axis.name, value)}
+                        disabled={disabled}
+                        title={isSoldOut ? `${value} — esgotado` : value}
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                          isSelected
+                            ? 'border-gray-900 bg-gray-900 text-white'
+                            : disabled
+                            ? 'border-gray-200 text-gray-300 cursor-not-allowed'
+                            : 'border-gray-300 text-gray-700 hover:border-gray-500'
+                        } ${isSoldOut && !isSelected ? 'opacity-50' : ''}`}
+                      >
+                        {value}
+                        {isSoldOut && <span className="text-xs">(esgotado)</span>}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -151,17 +187,29 @@ export default function ProductActions({ product }) {
           <p className="text-lg text-gray-500">Selecione as opções acima para ver o preço</p>
         ) : (
           <>
-            <p className="text-4xl font-bold text-gray-900 mb-2">
+            {hasPixDiscount && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full mb-2">
+                <i className="fas fa-bolt"></i>
+                {pixDiscountPercent}% de desconto pagando no PIX
+              </span>
+            )}
+            <p className="text-4xl font-bold text-gray-900 mb-1">
               R$ {totalPrice.toFixed(2).replace('.', ',')}
+              <span className="text-base font-normal text-gray-500 ml-2">no PIX</span>
             </p>
+            {hasPixDiscount && (
+              <p className="text-sm text-gray-500">
+                ou R$ {(displayCardPrice * quantity).toFixed(2).replace('.', ',')} no cartão
+              </p>
+            )}
             {product.installments > 1 && (
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 mt-1">
                 ou em até{' '}
                 <span className="font-bold">
                   {product.installments}x de R${' '}
                   {installmentValue.toFixed(2).replace('.', ',')}
                 </span>{' '}
-                sem juros
+                sem juros no cartão
               </p>
             )}
             {quantity > 1 && (
@@ -230,6 +278,7 @@ export default function ProductActions({ product }) {
 
       <div className="flex flex-col gap-3 mt-4">
         <button
+          onClick={buyNow}
           disabled={!canAddToCart}
           className="w-full bg-brand-dark font-bold py-3 px-6 rounded-lg shadow-md hover:opacity-90 transition-all transform hover:scale-105 action-button disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           style={{ color: affiliate.buttonColor || '#0043f7' }}
@@ -239,14 +288,28 @@ export default function ProductActions({ product }) {
       </div>
 
       <div className="mt-8 border-t border-gray-200 pt-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
+        <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
           <i className="fas fa-plane-departure text-sm"></i>
           Retirada em Orlando
         </h3>
-        <p className="text-sm text-gray-600">
-          Não há entrega no Brasil. Você escolhe a data prevista da sua viagem no checkout e retira o aparelho
-          pessoalmente em Orlando, mediante passaporte e passagem aérea.
-        </p>
+        <ul className="space-y-2.5 text-sm text-gray-600">
+          <li className="flex items-start gap-2.5">
+            <i className="fas fa-calendar-check text-gray-400 mt-0.5"></i>
+            <span>Você escolhe a data prevista da sua viagem no checkout.</span>
+          </li>
+          <li className="flex items-start gap-2.5">
+            <i className="fas fa-passport text-gray-400 mt-0.5"></i>
+            <span>Leve passaporte e passagem aérea no momento da retirada.</span>
+          </li>
+          <li className="flex items-start gap-2.5">
+            <i className="fas fa-hand-holding text-gray-400 mt-0.5"></i>
+            <span>Retirada pessoal em Orlando — não há entrega no Brasil.</span>
+          </li>
+          <li className="flex items-start gap-2.5">
+            <i className="fas fa-shield-alt text-gray-400 mt-0.5"></i>
+            <span>Aparelho original Apple com garantia internacional.</span>
+          </li>
+        </ul>
       </div>
     </>
   );
