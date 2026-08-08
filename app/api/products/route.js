@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '../../../lib/auth';
-import { upsertProduct } from '../../../lib/products';
+import { upsertProduct, deleteProductSmart } from '../../../lib/products';
 
 // Forçar rota dinâmica (usa cookies)
 export const dynamic = 'force-dynamic';
@@ -186,6 +186,45 @@ export async function PUT(request) {
     });
   } catch (error) {
     console.error('Error updating product:', error);
+    return NextResponse.json(
+      { success: false, error: 'Erro interno do servidor' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request) {
+  try {
+    const auth = await requireAuth();
+    if (!auth.authenticated) {
+      return NextResponse.json(
+        { success: false, error: 'Não autenticado' },
+        { status: 401 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: 'ID do produto é obrigatório' },
+        { status: 400 }
+      );
+    }
+
+    const result = await deleteProductSmart(id);
+
+    if (!result.success) {
+      return NextResponse.json(
+        { success: false, error: result.error },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({ success: true, hardDeleted: result.hardDeleted });
+  } catch (error) {
+    console.error('Error deleting product:', error);
     return NextResponse.json(
       { success: false, error: 'Erro interno do servidor' },
       { status: 500 }
