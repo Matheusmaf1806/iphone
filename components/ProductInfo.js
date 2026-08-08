@@ -95,23 +95,33 @@ export default function ProductInfo({ product, children }) {
         </div>
       </div>
       <div className="flex items-center mb-4">
-        <div style={{ color: brandColor }}>
-          <i className="fas fa-star"></i>
-          <i className="fas fa-star"></i>
-          <i className="fas fa-star"></i>
-          <i className="fas fa-star"></i>
-          <i className="fas fa-star-half-alt"></i>
-        </div>
-        <span className="text-gray-600 ml-2">
-          ({product.reviews} avaliações)
-        </span>
+        {product.reviews > 0 ? (
+          <>
+            <div style={{ color: brandColor }}>
+              {[1, 2, 3, 4, 5].map(star => (
+                <i
+                  key={star}
+                  className={`fas ${
+                    star <= Math.floor(product.rating || 0)
+                      ? 'fa-star'
+                      : star - 0.5 <= (product.rating || 0)
+                      ? 'fa-star-half-alt'
+                      : 'fa-star text-gray-300'
+                  }`}
+                ></i>
+              ))}
+            </div>
+            <span className="text-gray-600 ml-2">
+              {product.rating?.toFixed(1)} · {product.reviews} avaliaç{product.reviews === 1 ? 'ão' : 'ões'}
+            </span>
+          </>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full">
+            <i className="fas fa-star"></i>
+            Novo · seja o primeiro a avaliar
+          </span>
+        )}
       </div>
-
-      <img
-        src="https://image-xi-inky.vercel.app/public/GIFSITE.gif"
-        alt="Oferta especial animada"
-        className="w-full my-4 rounded-lg shadow-md"
-      />
 
       {children}
     </div>

@@ -1,10 +1,8 @@
 import { notFound } from 'next/navigation';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
-import ProductGallery from '../../../components/ProductGallery';
-import ProductActions from '../../../components/ProductActions';
+import ProductPurchasePanel from '../../../components/ProductPurchasePanel';
 import ProductTabs from '../../../components/ProductTabs';
-import ProductInfo from '../../../components/ProductInfo';
 import FeaturedProducts from '../../../components/FeaturedProducts';
 import ComboSuggestion from '../../../components/CrossSellCarousel';
 import { getProduct, getRelatedProducts, getCrossSellProducts } from '../../../lib/products';
@@ -129,15 +127,7 @@ export default async function ProductPage({ params }) {
           <span className="text-gray-900 font-medium">{productWithPrices.name}</span>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
-          {/* Product Images */}
-          <ProductGallery images={productWithPrices.images} />
-
-          {/* Product Details */}
-          <ProductInfo product={productWithPrices}>
-            <ProductActions product={productWithPrices} />
-          </ProductInfo>
-        </div>
+        <ProductPurchasePanel product={productWithPrices} />
 
         {/* Cross-sell inteligente - Combo sugestão */}
         {crossSellProducts.length > 0 && (
