@@ -98,8 +98,35 @@ export default function ProductList({ initialProducts }) {
       } else {
         alert(`Erro ao duplicar produto: ${data.error}`);
       }
+    } catch (err) {
+      alert('Erro ao conectar com o servidor');
+    }
+  };
+
+  const handleDeleteProduct = async (product) => {
+    if (!confirm(`Excluir "${product.name}"? Se ele já tiver pedidos, será apenas desativado (histórico preservado); senão, é apagado de vez.`)) return;
+
+    try {
+      const response = await fetch(`/api/products?id=${product.id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        if (data.hardDeleted) {
+          setProducts(prev => prev.filter(p => p.id !== product.id));
+          alert('Produto excluído.');
+        } else {
+          setProducts(prev => prev.map(p => (p.id === product.id ? { ...p, is_active: false } : p)));
+          alert('Este produto já tem pedidos associados — foi desativado (não removido) para preservar o histórico de vendas.');
+        }
+      } else {
+        alert(`Erro ao excluir produto: ${data.error}`);
+      }
     } catch (error) {
-      console.error('Error duplicating product:', error);
+      console.error('Error deleting product:', error);
       alert('Erro ao conectar com o servidor');
     }
   };
@@ -545,6 +572,15 @@ export default function ProductList({ initialProducts }) {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                               </svg>
                             </a>
+                            <button
+                              onClick={() => handleDeleteProduct(product)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Excluir produto"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
                           </div>
                         </td>
                       </tr>
