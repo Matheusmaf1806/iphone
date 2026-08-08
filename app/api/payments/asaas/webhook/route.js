@@ -55,7 +55,7 @@ export async function POST(request) {
         .eq('transaction_id', payment.id),
       supabase
         .from('orders')
-        .update({ status: 'paid' })
+        .update({ status: 'paid', payment_status: 'paid' })
         .eq('id', paymentRecord.order_id),
     ]);
 

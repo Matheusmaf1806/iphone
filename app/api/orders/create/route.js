@@ -41,7 +41,7 @@ export async function POST(request) {
     if (affiliateId) {
       const { data: affiliateData } = await supabase
         .from('affiliates')
-        .select('id, username, commission_percentage')
+        .select('id, commission_rate')
         .eq('id', affiliateId)
         .eq('is_active', true)
         .single();
@@ -68,7 +68,7 @@ export async function POST(request) {
       // Use customMarkup from agent if provided, otherwise use affiliate commission or default
       const affiliateMargin = (item.customMarkup !== null && item.customMarkup !== undefined)
         ? item.customMarkup
-        : (affiliate?.commission_percentage || config.defaultAffiliateMargin);
+        : (affiliate?.commission_rate || config.defaultAffiliateMargin);
 
       const prices = calculateAllPrices({
         costPrice: item.costPrice,
@@ -137,7 +137,9 @@ export async function POST(request) {
         total: orderTotal,
         affiliate_id: affiliate?.id || null,
         affiliate_commission: totalAffiliateCommission,
+        affiliate_amount: totalAffiliateCommission,
         status: 'pending',
+        payment_status: 'pending',
       })
       .select()
       .single();
@@ -200,6 +202,14 @@ export async function POST(request) {
         status: payment.paypalTransactionId ? 'completed' : 'pending',
         transaction_id: payment.paypalTransactionId || null,
       });
+
+      // PayPal já captura o pagamento no momento da criação — refletir isso no pedido
+      if (payment.paypalTransactionId) {
+        await supabase
+          .from('orders')
+          .update({ status: 'paid', payment_status: 'paid' })
+          .eq('id', order.id);
+      }
     }
 
     // Registrar uso do cupom se houver
