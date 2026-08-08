@@ -7,13 +7,20 @@ import { registerCouponUsage } from '../../../../lib/coupons';
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { customer, shipping, payment, items, affiliateId, shippingCost, coupon } = body;
+    const { customer, pickup, payment, items, affiliateId, coupon } = body;
 
     // Validação básica
-    if (!customer || !shipping || !payment || !items || items.length === 0) {
+    if (!customer || !pickup || !payment || !items || items.length === 0) {
       return NextResponse.json({
         success: false,
         error: 'Dados do pedido incompletos',
+      }, { status: 400 });
+    }
+
+    if (!pickup.travelDate || !pickup.pickupLocation || !pickup.termsAccepted) {
+      return NextResponse.json({
+        success: false,
+        error: 'Dados de retirada incompletos',
       }, { status: 400 });
     }
 
@@ -109,7 +116,7 @@ export async function POST(request) {
 
     // Aplicar desconto PIX no subtotal se for o caso (após cupom)
     const pixDiscount = payment.method === 'pix' ? subtotalAfterCoupon * (config.pixDiscountPercentage / 100) : 0;
-    orderTotal = subtotalAfterCoupon + shippingCost - pixDiscount;
+    orderTotal = subtotalAfterCoupon - pixDiscount;
 
     // Criar pedido
     const { data: order, error: orderError } = await supabase
@@ -119,14 +126,10 @@ export async function POST(request) {
         customer_email: customer.email,
         customer_phone: customer.phone,
         customer_cpf: customer.cpf,
-        shipping_cep: shipping.cep,
-        shipping_street: shipping.street,
-        shipping_number: shipping.number,
-        shipping_complement: shipping.complement,
-        shipping_neighborhood: shipping.neighborhood,
-        shipping_city: shipping.city,
-        shipping_state: shipping.state,
-        shipping_cost: shippingCost,
+        pickup_travel_date: pickup.travelDate,
+        pickup_location: pickup.pickupLocation,
+        pickup_travel_notes: pickup.travelNotes || null,
+        pickup_terms_accepted: pickup.termsAccepted,
         payment_method: payment.method,
         subtotal: orderSubtotal,
         coupon_discount: couponDiscount,

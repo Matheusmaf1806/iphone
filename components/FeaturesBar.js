@@ -45,7 +45,7 @@ export default function FeaturesBar() {
             </div>
             <div className="text-left">
               <p className="font-bold text-gray-900 text-sm">Parcele em até</p>
-              <p className="text-xs text-gray-600">12x sem juros</p>
+              <p className="text-xs text-gray-600">21x sem juros</p>
             </div>
           </div>
         </div>

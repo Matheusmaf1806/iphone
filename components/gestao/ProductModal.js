@@ -216,7 +216,7 @@ export default function ProductModal({ product, onClose, onSave }) {
       const salePrice = calculateSalePrice();
 
       // Calcular valor da parcela (assumindo parcelamento padrão)
-      const defaultInstallments = 12; // Todos produtos podem ser parcelados em até 12x
+      const defaultInstallments = 21; // Todos produtos podem ser parcelados em até 21x
       const installmentValue = salePrice > 0 ? (salePrice / defaultInstallments) : null;
 
       const mainImageUrl = productImages.length > 0 ? productImages[0] : formData.image_url || null;
@@ -799,7 +799,7 @@ export default function ProductModal({ product, onClose, onSave }) {
                           Fórmula: R$ {formData.cost_price} / (1 - {formData.supplier_margin_percentage}%) = R$ {salePrice.toFixed(2)}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
-                          📦 Parcelamento: até 12x de R$ {(salePrice / 12).toFixed(2)} sem juros
+                          📦 Parcelamento: até 21x de R$ {(salePrice / 21).toFixed(2)} sem juros
                         </p>
                       </div>
                       <div className="text-right">

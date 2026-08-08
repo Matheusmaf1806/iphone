@@ -8,7 +8,7 @@ const slides = [
     id: 1,
     gradient: 'linear-gradient(135deg, #1d1d1f, #3a3a3c)',
     icon: 'fa-mobile-alt',
-    title: 'iPhone parcelado em até 12x sem juros',
+    title: 'iPhone parcelado em até 21x sem juros',
     subtitle: 'Pague em reais, no seu cartão, do jeito que você já compra hoje.',
   },
   {

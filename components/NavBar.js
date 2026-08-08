@@ -66,7 +66,7 @@ export default function NavBar({ brandColor }) {
               className="text-white py-1 px-3 rounded-full transition-transform hover:scale-105"
               style={{ backgroundColor: brandColor }}
             >
-              PARCELE EM 12X
+              PARCELE EM 21X
             </a>
           </li>
           <li>

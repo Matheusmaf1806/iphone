@@ -3,13 +3,9 @@
 import { useState } from 'react';
 import { useCart } from '../contexts/CartContext';
 import { useAffiliate } from '../contexts/AffiliateContext';
-import Loader from './Loader';
 
 export default function ProductActions({ product }) {
   const [quantity, setQuantity] = useState(1);
-  const [cep, setCep] = useState('');
-  const [shippingResults, setShippingResults] = useState(null);
-  const [loading, setLoading] = useState(false);
   const { addToCart: addToCartContext, setIsOpen } = useCart();
   const affiliate = useAffiliate();
 
@@ -28,33 +24,6 @@ export default function ProductActions({ product }) {
     setTimeout(() => {
       setIsOpen(true);
     }, 100);
-  };
-
-  const calculateShipping = () => {
-    if (!cep) {
-      alert('Por favor, digite um CEP.');
-      return;
-    }
-
-    setLoading(true);
-    setShippingResults(null);
-
-    // Simular chamada de API
-    setTimeout(() => {
-      setShippingResults([
-        {
-          name: 'Entrega Normal',
-          time: 'Receba em até 5 dias úteis',
-          price: 'R$ 15,00',
-        },
-        {
-          name: 'Entrega Expressa',
-          time: 'Receba em até 2 dias úteis',
-          price: 'R$ 25,00',
-        },
-      ]);
-      setLoading(false);
-    }, 1500);
   };
 
   const totalPrice = product.price * quantity;
@@ -145,46 +114,14 @@ export default function ProductActions({ product }) {
       </div>
 
       <div className="mt-8 border-t border-gray-200 pt-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          Calcular frete e prazo
+        <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
+          <i className="fas fa-plane-departure text-sm"></i>
+          Retirada em Orlando
         </h3>
-        <div className="flex space-x-2">
-          <input
-            type="text"
-            id="cep-input"
-            placeholder="Digite seu CEP"
-            value={cep}
-            onChange={(e) => setCep(e.target.value)}
-            className="flex-grow bg-gray-100 text-gray-900 placeholder-gray-500 border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-custom-yellow"
-          />
-          <button
-            onClick={calculateShipping}
-            className="bg-gray-800 text-white font-semibold py-2 px-4 rounded-md hover:bg-black transition-colors"
-          >
-            Calcular
-          </button>
-        </div>
-        {loading && (
-          <div className="mt-4 flex justify-center">
-            <Loader size="sm" />
-          </div>
-        )}
-        {shippingResults && !loading && (
-          <div className="mt-4 space-y-2">
-            {shippingResults.map((result, index) => (
-              <div
-                key={index}
-                className="border rounded-md p-3 flex justify-between items-center bg-gray-50"
-              >
-                <div>
-                  <p className="font-bold">{result.name}</p>
-                  <p className="text-sm text-gray-600">{result.time}</p>
-                </div>
-                <p className="font-bold text-custom-yellow">{result.price}</p>
-              </div>
-            ))}
-          </div>
-        )}
+        <p className="text-sm text-gray-600">
+          Não há entrega no Brasil. Você escolhe a data prevista da sua viagem no checkout e retira o aparelho
+          pessoalmente em Orlando, mediante passaporte e passagem aérea.
+        </p>
       </div>
     </>
   );

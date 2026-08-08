@@ -24,14 +24,11 @@ export default function CheckoutForm({ config }) {
     email: '',
     phone: '',
     cpf: '',
-    // Endereço
-    cep: '',
-    street: '',
-    number: '',
-    complement: '',
-    neighborhood: '',
-    city: '',
-    state: '',
+    // Retirada em Orlando
+    travelDate: '',
+    pickupLocation: '',
+    travelNotes: '',
+    termsAccepted: false,
     // Pagamento
     paymentMethod: '',
     cardNumber: '',
@@ -78,13 +75,6 @@ export default function CheckoutForm({ config }) {
       email: customer.email || prev.email,
       phone: customer.phone || prev.phone,
       cpf: customer.cpf || prev.cpf,
-      cep: customer.address_zipcode || prev.cep,
-      street: customer.address_street || prev.street,
-      number: customer.address_number || prev.number,
-      complement: customer.address_complement || prev.complement,
-      neighborhood: customer.address_neighborhood || prev.neighborhood,
-      city: customer.address_city || prev.city,
-      state: customer.address_state || prev.state,
     }));
   }, [customer]);
 
@@ -178,15 +168,13 @@ export default function CheckoutForm({ config }) {
     }
 
     const subtotalAfterCoupon = subtotal - couponDiscount;
-    const shipping = subtotalAfterCoupon >= 199 ? 0 : 15.90;
     const pixDiscount = isPix ? subtotalAfterCoupon * (config.pixDiscountPercentage / 100) : 0;
-    const total = subtotalAfterCoupon + shipping - pixDiscount;
+    const total = subtotalAfterCoupon - pixDiscount;
 
     return {
       subtotal,
       couponDiscount,
       subtotalAfterCoupon,
-      shipping,
       pixDiscount,
       total,
       isPix,
@@ -328,12 +316,6 @@ export default function CheckoutForm({ config }) {
     }
   };
 
-  const formatCEP = (value) => {
-    const cleaned = value.replace(/\D/g, '');
-    if (cleaned.length <= 5) return cleaned;
-    return `${cleaned.slice(0, 5)}-${cleaned.slice(5, 8)}`;
-  };
-
   const formatPhone = (value) => {
     const cleaned = value.replace(/\D/g, '');
     if (cleaned.length <= 2) return cleaned;
@@ -366,12 +348,12 @@ export default function CheckoutForm({ config }) {
 
   const validateStep2 = () => {
     const newErrors = {};
-    if (!formData.cep || formData.cep.replace(/\D/g, '').length !== 8) newErrors.cep = 'CEP válido é obrigatório';
-    if (!formData.street) newErrors.street = 'Endereço é obrigatório';
-    if (!formData.number) newErrors.number = 'Número é obrigatório';
-    if (!formData.neighborhood) newErrors.neighborhood = 'Bairro é obrigatório';
-    if (!formData.city) newErrors.city = 'Cidade é obrigatória';
-    if (!formData.state) newErrors.state = 'Estado é obrigatório';
+    if (!formData.travelDate) newErrors.travelDate = 'Data prevista da viagem é obrigatória';
+    if (formData.travelDate && new Date(formData.travelDate) < new Date(new Date().toDateString())) {
+      newErrors.travelDate = 'A data da viagem precisa ser futura';
+    }
+    if (!formData.pickupLocation) newErrors.pickupLocation = 'Selecione o local de retirada';
+    if (!formData.termsAccepted) newErrors.termsAccepted = 'Você precisa confirmar que leu e concorda com os termos de retirada';
     return newErrors;
   };
 
@@ -467,14 +449,11 @@ export default function CheckoutForm({ config }) {
           phone: formData.phone,
           cpf: formData.cpf,
         },
-        shipping: {
-          cep: formData.cep,
-          street: formData.street,
-          number: formData.number,
-          complement: formData.complement,
-          neighborhood: formData.neighborhood,
-          city: formData.city,
-          state: formData.state,
+        pickup: {
+          travelDate: formData.travelDate,
+          pickupLocation: formData.pickupLocation,
+          travelNotes: formData.travelNotes,
+          termsAccepted: formData.termsAccepted,
         },
         payment: {
           method,
@@ -490,7 +469,6 @@ export default function CheckoutForm({ config }) {
             : (item.customMarkup !== undefined ? parseFloat(item.customMarkup) : null),
         })),
         affiliateId: affiliate?.affiliateId || affiliate?.id || null,
-        shippingCost: pricing.shipping,
         coupon: appliedCoupon ? {
           id: appliedCoupon.coupon.id,
           code: appliedCoupon.coupon.code,
@@ -517,13 +495,6 @@ export default function CheckoutForm({ config }) {
             body: JSON.stringify({
               phone: formData.phone,
               cpf: formData.cpf,
-              address_street: formData.street,
-              address_number: formData.number,
-              address_complement: formData.complement,
-              address_neighborhood: formData.neighborhood,
-              address_city: formData.city,
-              address_state: formData.state,
-              address_zipcode: formData.cep,
             }),
           }).catch(err => console.error('Error saving profile:', err));
         }
@@ -610,8 +581,14 @@ export default function CheckoutForm({ config }) {
 
   const steps = [
     { number: 1, title: 'Dados Pessoais', icon: 'fa-user' },
-    { number: 2, title: 'Endereço', icon: 'fa-map-marker-alt' },
+    { number: 2, title: 'Retirada', icon: 'fa-plane-departure' },
     { number: 3, title: 'Pagamento', icon: 'fa-credit-card' },
+  ];
+
+  const pickupLocations = [
+    { value: 'international-drive', label: 'International Drive, Orlando' },
+    { value: 'orlando-outlets', label: 'Orlando International Premium Outlets' },
+    { value: 'a-combinar', label: 'A combinar por WhatsApp após a compra' },
   ];
 
   return (
@@ -755,162 +732,94 @@ export default function CheckoutForm({ config }) {
               </div>
             )}
 
-            {/* Step 2: Endereço */}
+            {/* Step 2: Retirada em Orlando */}
             {currentStep === 2 && (
               <div className="bg-white rounded-2xl p-6 md:p-8 shadow-md">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                  <i className="fas fa-map-marker-alt " style={{ color: affiliate.buttonColor || '#0071e3' }}></i>
-                  Endereço de Entrega
+                <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+                  <i className="fas fa-plane-departure " style={{ color: affiliate.buttonColor || '#0071e3' }}></i>
+                  Retirada em Orlando
                 </h2>
+                <p className="text-sm text-gray-500 mb-6">
+                  Não há entrega no Brasil: você retira o aparelho pessoalmente na sua viagem, mediante passaporte e passagem aérea.
+                </p>
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      CEP *
+                      Data prevista da retirada *
                     </label>
                     <input
-                      type="text"
-                      name="cep"
-                      value={formData.cep}
-                      onChange={(e) => {
-                        const formatted = formatCEP(e.target.value);
-                        setFormData(prev => ({ ...prev, cep: formatted }));
-                      }}
+                      type="date"
+                      name="travelDate"
+                      value={formData.travelDate}
+                      onChange={handleInputChange}
+                      min={new Date().toISOString().split('T')[0]}
                       className={`w-full px-4 py-3 border-2 ${
-                        errors.cep ? 'border-red-500' : 'border-gray-200'
-                      } rounded-xl focus:outline-none  transition-colors`}
-                      placeholder="00000-000"
-                      maxLength="9"
+                        errors.travelDate ? 'border-red-500' : 'border-gray-200'
+                      } rounded-xl focus:outline-none transition-colors`}
                     />
-                    {errors.cep && <p className="text-red-500 text-xs mt-1">{errors.cep}</p>}
+                    {errors.travelDate && <p className="text-red-500 text-xs mt-1">{errors.travelDate}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Local de retirada *
+                    </label>
+                    <select
+                      name="pickupLocation"
+                      value={formData.pickupLocation}
+                      onChange={handleInputChange}
+                      className={`w-full px-4 py-3 border-2 ${
+                        errors.pickupLocation ? 'border-red-500' : 'border-gray-200'
+                      } rounded-xl focus:outline-none transition-colors`}
+                    >
+                      <option value="">Selecione</option>
+                      {pickupLocations.map(loc => (
+                        <option key={loc.value} value={loc.value}>{loc.label}</option>
+                      ))}
+                    </select>
+                    {errors.pickupLocation && <p className="text-red-500 text-xs mt-1">{errors.pickupLocation}</p>}
                   </div>
 
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Endereço *
+                      Observações da viagem (opcional)
                     </label>
-                    <input
-                      type="text"
-                      name="street"
-                      value={formData.street}
+                    <textarea
+                      name="travelNotes"
+                      value={formData.travelNotes}
                       onChange={handleInputChange}
-                      className={`w-full px-4 py-3 border-2 ${
-                        errors.street ? 'border-red-500' : 'border-gray-200'
-                      } rounded-xl focus:outline-none  transition-colors`}
-                      placeholder="Rua, Avenida, etc."
+                      rows={3}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none transition-colors"
+                      placeholder="Ex: número do voo, hotel, melhor horário para contato em Orlando..."
                     />
-                    {errors.street && <p className="text-red-500 text-xs mt-1">{errors.street}</p>}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Número *
-                    </label>
-                    <input
-                      type="text"
-                      name="number"
-                      value={formData.number}
-                      onChange={handleInputChange}
-                      className={`w-full px-4 py-3 border-2 ${
-                        errors.number ? 'border-red-500' : 'border-gray-200'
-                      } rounded-xl focus:outline-none  transition-colors`}
-                      placeholder="123"
-                    />
-                    {errors.number && <p className="text-red-500 text-xs mt-1">{errors.number}</p>}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Complemento
-                    </label>
-                    <input
-                      type="text"
-                      name="complement"
-                      value={formData.complement}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none  transition-colors"
-                      placeholder="Apto, Bloco, etc."
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Bairro *
-                    </label>
-                    <input
-                      type="text"
-                      name="neighborhood"
-                      value={formData.neighborhood}
-                      onChange={handleInputChange}
-                      className={`w-full px-4 py-3 border-2 ${
-                        errors.neighborhood ? 'border-red-500' : 'border-gray-200'
-                      } rounded-xl focus:outline-none  transition-colors`}
-                      placeholder="Bairro"
-                    />
-                    {errors.neighborhood && <p className="text-red-500 text-xs mt-1">{errors.neighborhood}</p>}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Cidade *
-                    </label>
-                    <input
-                      type="text"
-                      name="city"
-                      value={formData.city}
-                      onChange={handleInputChange}
-                      className={`w-full px-4 py-3 border-2 ${
-                        errors.city ? 'border-red-500' : 'border-gray-200'
-                      } rounded-xl focus:outline-none  transition-colors`}
-                      placeholder="Cidade"
-                    />
-                    {errors.city && <p className="text-red-500 text-xs mt-1">{errors.city}</p>}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Estado *
-                    </label>
-                    <select
-                      name="state"
-                      value={formData.state}
-                      onChange={handleInputChange}
-                      className={`w-full px-4 py-3 border-2 ${
-                        errors.state ? 'border-red-500' : 'border-gray-200'
-                      } rounded-xl focus:outline-none  transition-colors`}
-                    >
-                      <option value="">Selecione</option>
-                      <option value="AC">Acre</option>
-                      <option value="AL">Alagoas</option>
-                      <option value="AP">Amapá</option>
-                      <option value="AM">Amazonas</option>
-                      <option value="BA">Bahia</option>
-                      <option value="CE">Ceará</option>
-                      <option value="DF">Distrito Federal</option>
-                      <option value="ES">Espírito Santo</option>
-                      <option value="GO">Goiás</option>
-                      <option value="MA">Maranhão</option>
-                      <option value="MT">Mato Grosso</option>
-                      <option value="MS">Mato Grosso do Sul</option>
-                      <option value="MG">Minas Gerais</option>
-                      <option value="PA">Pará</option>
-                      <option value="PB">Paraíba</option>
-                      <option value="PR">Paraná</option>
-                      <option value="PE">Pernambuco</option>
-                      <option value="PI">Piauí</option>
-                      <option value="RJ">Rio de Janeiro</option>
-                      <option value="RN">Rio Grande do Norte</option>
-                      <option value="RS">Rio Grande do Sul</option>
-                      <option value="RO">Rondônia</option>
-                      <option value="RR">Roraima</option>
-                      <option value="SC">Santa Catarina</option>
-                      <option value="SP">São Paulo</option>
-                      <option value="SE">Sergipe</option>
-                      <option value="TO">Tocantins</option>
-                    </select>
-                    {errors.state && <p className="text-red-500 text-xs mt-1">{errors.state}</p>}
                   </div>
                 </div>
+
+                <div className="mt-6 bg-amber-50 border border-amber-200 rounded-xl p-4">
+                  <p className="text-xs text-amber-800 leading-relaxed">
+                    <i className="fas fa-info-circle mr-1"></i>
+                    O aparelho é retirado pessoalmente por quem comprou, mediante passaporte e passagem aérea, e
+                    entra no Brasil dentro da sua cota pessoal de bagagem de viajante. Valores acima da cota estão
+                    sujeitos a imposto de importação, e é sua responsabilidade declarar quando exigido pela Receita
+                    Federal. Este pedido é limitado a 1 unidade por CPF por viagem.
+                  </p>
+                </div>
+
+                <label className="mt-4 flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="termsAccepted"
+                    checked={formData.termsAccepted}
+                    onChange={(e) => setFormData(prev => ({ ...prev, termsAccepted: e.target.checked }))}
+                    className="mt-1 w-4 h-4 rounded"
+                    style={{ accentColor: affiliate.buttonColor || '#0071e3' }}
+                  />
+                  <span className="text-sm text-gray-700">
+                    Li e estou de acordo com as condições de retirada em Orlando acima. *
+                  </span>
+                </label>
+                {errors.termsAccepted && <p className="text-red-500 text-xs mt-1">{errors.termsAccepted}</p>}
               </div>
             )}
 
@@ -989,7 +898,7 @@ export default function CheckoutForm({ config }) {
                   >
                     <i className="fas fa-credit-card text-2xl mb-2" style={{ color: affiliate.buttonColor || '#0071e3' }}></i>
                     <p className="font-bold text-gray-900 text-sm">Cartão</p>
-                    <p className="text-[10px] text-gray-500">Até 12x s/ juros</p>
+                    <p className="text-[10px] text-gray-500">Até 21x s/ juros</p>
                   </button>
                 </div>
 
@@ -1214,7 +1123,7 @@ export default function CheckoutForm({ config }) {
                   Seu pedido #{orderResult?.orderId} foi criado com sucesso.
                 </p>
                 <p className="text-gray-500 text-sm mb-8">
-                  Você receberá um email com os detalhes do pedido e atualizações sobre o envio.
+                  Você receberá um email com os detalhes do pedido e as instruções para a retirada em Orlando.
                 </p>
                 <button
                   onClick={() => router.push('/')}
@@ -1367,12 +1276,6 @@ export default function CheckoutForm({ config }) {
                   <span className="font-semibold">- R$ {pricing.couponDiscount.toFixed(2).replace('.', ',')}</span>
                 </div>
               )}
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Frete</span>
-                <span className="font-semibold">
-                  {pricing.shipping === 0 ? 'Grátis' : `R$ ${pricing.shipping.toFixed(2).replace('.', ',')}`}
-                </span>
-              </div>
               {pricing.pixDiscount > 0 && (
                 <div className="flex justify-between text-sm text-green-600">
                   <span>Desconto PIX ({config.pixDiscountPercentage}%)</span>
@@ -1434,8 +1337,8 @@ export default function CheckoutForm({ config }) {
                 <span>Pagamento 100% seguro</span>
               </div>
               <div className="flex items-center gap-2 text-sm text-gray-600">
-                <i className="fas fa-truck " style={{ color: affiliate.buttonColor || '#0071e3' }}></i>
-                <span>Frete grátis acima de R$ 199</span>
+                <i className="fas fa-plane-departure " style={{ color: affiliate.buttonColor || '#0071e3' }}></i>
+                <span>Retirada pessoal em Orlando</span>
               </div>
             </div>
           </div>
@@ -1534,10 +1437,10 @@ export default function CheckoutForm({ config }) {
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-500 flex items-center gap-1">
                           <i className="fas fa-credit-card text-xs text-blue-500"></i>
-                          10x cartão
+                          21x cartão
                         </span>
                         <span className="font-bold text-blue-600">
-                          R$ {((previewCard * item.quantity) / 10).toFixed(2).replace('.', ',')}/mês
+                          R$ {((previewCard * item.quantity) / 21).toFixed(2).replace('.', ',')}/mês
                         </span>
                       </div>
                       {commissionUnit > 0 && (
