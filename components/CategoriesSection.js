@@ -4,34 +4,34 @@ import { useAffiliate } from '../contexts/AffiliateContext';
 
 const categories = [
   {
-    name: 'Rações',
-    icon: 'fa-bowl-food',
-    slug: 'racoes',
+    name: 'iPhone',
+    icon: 'fa-mobile-alt',
+    slug: 'iphone',
   },
   {
-    name: 'Brinquedos',
-    icon: 'fa-baseball',
-    slug: 'brinquedos',
+    name: 'Mac',
+    icon: 'fa-laptop',
+    slug: 'mac',
+  },
+  {
+    name: 'iPad',
+    icon: 'fa-tablet-alt',
+    slug: 'ipad',
+  },
+  {
+    name: 'Apple Watch',
+    icon: 'fa-clock',
+    slug: 'apple-watch',
+  },
+  {
+    name: 'AirPods',
+    icon: 'fa-headphones',
+    slug: 'airpods',
   },
   {
     name: 'Acessórios',
-    icon: 'fa-bone',
+    icon: 'fa-plug',
     slug: 'acessorios',
-  },
-  {
-    name: 'Higiene e Saúde',
-    icon: 'fa-shower',
-    slug: 'higiene-e-saude',
-  },
-  {
-    name: 'Camas e Casas',
-    icon: 'fa-house',
-    slug: 'camas-e-casas',
-  },
-  {
-    name: 'Passeio',
-    icon: 'fa-paw',
-    slug: 'passeio',
   },
 ];
 

@@ -51,11 +51,11 @@ export async function GET() {
       data: {
         logoUrl: affiliate.logo_url || '',
         faviconUrl: affiliate.favicon_url || '',
-        primaryColor: affiliate.primary_color || '#f60c49',
+        primaryColor: affiliate.primary_color || '#0071e3',
         backgroundColor: affiliate.background_color || '#ffffff',
-        buttonColor: affiliate.button_color || '#f60c49',
+        buttonColor: affiliate.button_color || '#0071e3',
         buttonTextColor: affiliate.button_text_color || '#000000',
-        buttonHover: affiliate.button_hover || '#d40a3f',
+        buttonHover: affiliate.button_hover || '#0058b3',
       },
     });
   } catch (error) {

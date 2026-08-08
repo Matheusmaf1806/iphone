@@ -28,13 +28,13 @@ export default function NewsletterSection() {
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-3xl mx-auto text-center">
           <div className="inline-block text-white px-4 py-2 rounded-full font-bold text-sm mb-4" style={{ backgroundColor: brandColor }}>
-            <i className="fas fa-paw mr-2"></i>NEWSLETTER PET
+            <i className="fas fa-mobile-alt mr-2"></i>NEWSLETTER
           </div>
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Ofertas Exclusivas para seu Pet
+            Ofertas Exclusivas em iPhone e Apple
           </h2>
           <p className="text-gray-300 text-lg mb-8">
-            Cadastre-se e ganhe <span className="font-bold" style={{ color: brandColor }}>10% OFF</span> na primeira compra! Dicas de cuidados e novidades toda semana.
+            Cadastre-se e receba <span className="font-bold" style={{ color: brandColor }}>alertas de preço</span> e novidades sobre as próximas datas de retirada em Orlando.
           </p>
 
           <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-xl mx-auto mb-6">
@@ -71,7 +71,7 @@ export default function NewsletterSection() {
           <div className="flex items-center justify-center gap-6 mt-8 pt-8 border-t border-gray-800">
             <div className="text-center">
               <p className="text-2xl font-bold" style={{ color: brandColor }}>50k+</p>
-              <p className="text-gray-400 text-sm">Pets Felizes</p>
+              <p className="text-gray-400 text-sm">Clientes Atendidos</p>
             </div>
             <div className="h-12 w-px bg-gray-800"></div>
             <div className="text-center">

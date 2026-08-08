@@ -1,5 +1,7 @@
 'use client';
 import { useAffiliate } from '../contexts/AffiliateContext';
+import Logo from './Logo';
+import { SITE_NAME } from '../lib/siteConfig';
 
 export default function Footer() {
   const affiliate = useAffiliate();
@@ -8,14 +10,10 @@ export default function Footer() {
       <div className="container mx-auto py-12 px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
           <div>
-            <img
-              src={affiliate.logo || 'https://brandpet.vercel.app/logo/brand_pet_logo_bege.png'}
-              alt={affiliate.name || 'BrandPet'}
-              className="h-12 mb-4"
-            />
+            <Logo src={affiliate.logo} name={affiliate.name} imgClassName="h-12 mb-4" textClassName="text-2xl font-bold tracking-tight text-gray-900 block mb-4" />
             <p className="text-gray-600 text-sm">
-              Cuidando do seu melhor amigo com amor e qualidade.
-              Produtos selecionados para a saúde e felicidade do seu pet.
+              iPhone e produtos Apple parcelados em reais, com retirada pessoal
+              em Orlando na sua próxima viagem. Originais, lacrados e com nota fiscal americana.
             </p>
           </div>
           <div>
@@ -105,11 +103,7 @@ export default function Footer() {
       </div>
       <div className="bg-gray-200 py-4">
         <div className="flex items-center justify-center gap-3">
-          <img
-            src="https://brandpet.vercel.app/logo/brand_pet_logo_vermelho.png"
-            alt="BrandPet"
-            className="h-8"
-          />
+          <span className="text-sm font-bold tracking-tight text-gray-800">{SITE_NAME}</span>
           <p className="text-xs text-gray-600">
             &copy; {new Date().getFullYear()} Todos os direitos reservados.
           </p>

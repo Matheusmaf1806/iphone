@@ -275,7 +275,7 @@ export default function PriceIntelligence({ products = [] }) {
         </svg>
         <p className="text-sm text-blue-700">
           Os preços são pesquisados via IA com busca na web em tempo real. Os resultados são estimativas baseadas em dados públicos e podem variar.
-          O preço final calculado inclui a margem BrandPet + margem padrão do afiliado (10%).
+          O preço final calculado inclui a margem da plataforma + margem padrão do afiliado (10%).
         </p>
       </div>
 

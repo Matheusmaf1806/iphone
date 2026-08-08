@@ -83,7 +83,7 @@ export default function SearchBar() {
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Buscar ração, brinquedo, acessório..."
+          placeholder="Buscar iPhone, Mac, iPad, AirPods..."
           className="w-full py-3 px-5 pr-12 rounded-full border-2 border-gray-300 focus:outline-none focus:border-brand-dark transition-colors"
         />
         <button
@@ -152,7 +152,7 @@ export default function SearchBar() {
 
                   {/* Price */}
                   <div className="text-right">
-                    <p className="text-lg font-bold " style={{ color: affiliate.buttonColor || '#f60c49' }}>
+                    <p className="text-lg font-bold " style={{ color: affiliate.buttonColor || '#0071e3' }}>
                       R$ {product.price.toFixed(2).replace('.', ',')}
                     </p>
                   </div>

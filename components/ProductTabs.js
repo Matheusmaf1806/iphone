@@ -102,10 +102,10 @@ export default function ProductTabs({ product }) {
           <div>
             <div className="flex flex-col md:flex-row items-center gap-8">
               <div className="text-center">
-                <p className="text-5xl font-bold" style={{ color: affiliate.buttonColor || '#f60c49' }}>
+                <p className="text-5xl font-bold" style={{ color: affiliate.buttonColor || '#0071e3' }}>
                   {product.rating || 0}
                 </p>
-                <div className="mt-2" style={{ color: affiliate.buttonColor || '#f60c49' }}>
+                <div className="mt-2" style={{ color: affiliate.buttonColor || '#0071e3' }}>
                   {[1, 2, 3, 4, 5].map(star => (
                     <i
                       key={star}

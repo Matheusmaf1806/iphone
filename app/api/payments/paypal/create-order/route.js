@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { SITE_NAME } from '../../../../../lib/siteConfig';
 
 const getPayPalBaseUrl = () =>
   process.env.PAYPAL_ENVIRONMENT === 'production'
@@ -62,7 +63,7 @@ export async function POST(request) {
               currency_code: 'BRL',
               value: Number(amount).toFixed(2),
             },
-            description: 'Pedido BrandPet',
+            description: `Pedido ${SITE_NAME}`,
           },
         ],
       }),

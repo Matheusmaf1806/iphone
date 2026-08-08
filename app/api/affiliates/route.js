@@ -98,11 +98,11 @@ export async function POST(request) {
         commission_rate: commission_rate ? parseFloat(commission_rate) : 0.10,
         is_active: true,
         logo_url: logo_url || null,
-        primary_color: primary_color || '#f60c49',
+        primary_color: primary_color || '#0071e3',
         background_color: background_color || '#ffffff',
-        button_color: button_color || '#f60c49',
+        button_color: button_color || '#0071e3',
         button_text_color: button_text_color || '#ffffff',
-        button_hover: button_hover || '#d40a3f',
+        button_hover: button_hover || '#0058b3',
       })
       .select()
       .single();

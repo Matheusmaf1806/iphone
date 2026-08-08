@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { isAuthenticated } from '../../../lib/auth';
 import LoginForm from '../../../components/gestao/LoginForm';
+import { SITE_NAME } from '../../../lib/siteConfig';
 
 export const metadata = {
   title: 'Login - Gestão',
@@ -17,13 +18,9 @@ export default function LoginPage() {
       <div className="max-w-md w-full">
         <div className="bg-white rounded-lg shadow-lg p-8">
           <div className="text-center mb-8">
-            <img
-              src="https://brandpet.vercel.app/logo/brand_pet_logo_bege.png"
-              alt="Logo"
-              className="h-16 mx-auto mb-4"
-            />
+            <p className="text-2xl font-bold tracking-tight text-gray-900 mb-4">{SITE_NAME}</p>
             <h1 className="text-2xl font-bold text-gray-900">
-              Gestão - Folha de Guiné
+              Gestão
             </h1>
             <p className="text-gray-600 mt-2">
               Faça login para acessar o painel de gestão

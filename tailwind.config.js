@@ -8,8 +8,8 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        'brand-yellow': 'var(--brand-color, #f60c49)',
-        'custom-yellow': 'var(--brand-color, #f60c49)',
+        'brand-yellow': 'var(--brand-color, #0071e3)',
+        'custom-yellow': 'var(--brand-color, #0071e3)',
         'brand-dark': '#101942',
       },
     },

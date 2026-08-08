@@ -4,11 +4,11 @@ import { useState, useEffect } from 'react';
 import ImageUpload from '../shared/ImageUpload';
 
 const DEFAULT_COLORS = {
-  primary_color: '#f60c49',
+  primary_color: '#0071e3',
   background_color: '#ffffff',
-  button_color: '#f60c49',
+  button_color: '#0071e3',
   button_text_color: '#ffffff',
-  button_hover: '#d40a3f',
+  button_hover: '#0058b3',
 };
 
 const INITIAL_FORM = {
@@ -216,7 +216,7 @@ export default function AfiliadosManager() {
                       value={formData.name}
                       onChange={handleChange}
                       required
-                      placeholder="Ex: Pet Shop do João"
+                      placeholder="Ex: Loja do João"
                       className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm"
                     />
                   </div>
@@ -227,7 +227,7 @@ export default function AfiliadosManager() {
                       value={formData.slug}
                       onChange={handleChange}
                       required
-                      placeholder="pet-shop-do-joao"
+                      placeholder="loja-do-joao"
                       className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm font-mono"
                     />
                     <p className="text-xs text-gray-400 mt-1">Gerado automaticamente do nome</p>
