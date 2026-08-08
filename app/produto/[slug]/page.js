@@ -23,15 +23,19 @@ const CATEGORY_NAMES = {
   'promocoes': 'Promoções',
 };
 
+function priceOne(costPrice, supplierMarginPercentage, affiliate, config) {
+  return calculateAllPrices({
+    costPrice,
+    supplierMarginPercentage,
+    affiliateMarginPercentage: affiliate?.commission_percentage || config.defaultAffiliateMargin,
+    cardFeePercentage: config.cardFeePercentage,
+  });
+}
+
 function applyPrices(product, affiliate, config) {
   let p = { ...product };
   if (product.costPrice) {
-    const prices = calculateAllPrices({
-      costPrice: product.costPrice,
-      supplierMarginPercentage: product.supplierMarginPercentage,
-      affiliateMarginPercentage: affiliate?.commission_percentage || config.defaultAffiliateMargin,
-      cardFeePercentage: config.cardFeePercentage,
-    });
+    const prices = priceOne(product.costPrice, product.supplierMarginPercentage, affiliate, config);
     p.pixPrice = prices.pixPrice;
     p.cardPrice = prices.finalPrice;
     p.displayPrice = prices.pixPrice;
@@ -42,6 +46,28 @@ function applyPrices(product, affiliate, config) {
     p.pixPrice = product.price;
     p.cardPrice = product.price;
   }
+
+  // Cada SKU tem seu próprio custo (e, opcionalmente, sua própria margem) — precifica
+  // cada variante individualmente reaproveitando a mesma cascata de preço do produto.
+  if (product.hasVariants && product.variants?.length > 0) {
+    p.variants = product.variants
+      .filter(v => v.costPrice != null && v.costPrice > 0)
+      .map(v => {
+        const prices = priceOne(
+          v.costPrice,
+          v.supplierMarginPercentage ?? product.supplierMarginPercentage,
+          affiliate,
+          config
+        );
+        return {
+          ...v,
+          pixPrice: prices.pixPrice,
+          cardPrice: prices.finalPrice,
+          installmentValue: prices.finalPrice / (product.installments || 3),
+        };
+      });
+  }
+
   return p;
 }
 

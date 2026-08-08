@@ -11,8 +11,13 @@ export default function ProductCard({ product, layout = 'grid' }) {
   const cardPrice = product.cardPrice || displayPrice;
   const hasDiscount = cardPrice > displayPrice && (cardPrice - displayPrice) > 0.01;
   const discountPercent = hasDiscount ? Math.round(((cardPrice - displayPrice) / cardPrice) * 100) : 0;
+  const hasVariants = product.hasVariants || product.has_variants;
 
   const handleAddToCart = (e) => {
+    // Produtos com variações (cor/armazenamento/versão) não têm um SKU único para
+    // adicionar direto do card — o botão leva para a página do produto escolher a opção.
+    if (hasVariants) return;
+
     e.preventDefault();
     e.stopPropagation();
     addToCart({
@@ -79,6 +84,9 @@ export default function ProductCard({ product, layout = 'grid' }) {
                 R$ {cardPrice.toFixed(2).replace('.', ',')}
               </p>
             )}
+            {hasVariants && (
+              <p className="text-[11px] text-gray-500">a partir de</p>
+            )}
             <div className="flex items-baseline gap-1.5">
               <span className="text-lg font-bold" style={{ color: brandColor || '#0c0e0b' }}>
                 R$ {displayPrice.toFixed(2).replace('.', ',')}
@@ -99,16 +107,29 @@ export default function ProductCard({ product, layout = 'grid' }) {
       </a>
 
       {/* VER OPÇÕES button bar */}
-      <button
-        onClick={handleAddToCart}
-        className="w-full flex items-center justify-between px-4 py-3 text-white text-sm font-bold transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
-        style={{ backgroundColor: brandColor || '#0c0e0b' }}
-      >
-        <span>VER OPÇÕES</span>
-        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-        </svg>
-      </button>
+      {hasVariants ? (
+        <a
+          href={productUrl}
+          className="w-full flex items-center justify-between px-4 py-3 text-white text-sm font-bold transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
+          style={{ backgroundColor: brandColor || '#0c0e0b' }}
+        >
+          <span>VER OPÇÕES</span>
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+          </svg>
+        </a>
+      ) : (
+        <button
+          onClick={handleAddToCart}
+          className="w-full flex items-center justify-between px-4 py-3 text-white text-sm font-bold transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
+          style={{ backgroundColor: brandColor || '#0c0e0b' }}
+        >
+          <span>VER OPÇÕES</span>
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }

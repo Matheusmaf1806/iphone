@@ -1,7 +1,22 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '../../../lib/supabase/server';
+import { requireAuth } from '../../../lib/auth';
+import { syncProductFromVariants } from '../../../lib/products';
 
-// GET - List variants for a product or get variant types
+// Garante que só uma variante do produto fique marcada como padrão
+async function clearOtherDefaults(supabase, productId, exceptVariantId) {
+  let query = supabase
+    .from('product_variants')
+    .update({ is_default: false })
+    .eq('product_id', productId);
+  if (exceptVariantId) {
+    query = query.neq('id', exceptVariantId);
+  }
+  await query;
+}
+
+// GET - List variants for a product
+// (para tipos/valores de atributo, ver /api/product-variant-types)
 export async function GET(request) {
   try {
     const supabase = createServerClient();
@@ -14,19 +29,6 @@ export async function GET(request) {
 
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get('productId');
-    const getTypes = searchParams.get('types');
-
-    // Get variant types
-    if (getTypes === 'true') {
-      const { data, error } = await supabase
-        .from('product_variant_types')
-        .select('*')
-        .eq('is_active', true)
-        .order('display_order', { ascending: true });
-
-      if (error) throw error;
-      return NextResponse.json({ success: true, data });
-    }
 
     // Get variants for a product
     if (!productId) {
@@ -57,6 +59,11 @@ export async function GET(request) {
 // POST - Create a new variant
 export async function POST(request) {
   try {
+    const auth = await requireAuth();
+    if (!auth.authenticated) {
+      return NextResponse.json({ success: false, error: 'Não autenticado' }, { status: 401 });
+    }
+
     const supabase = createServerClient();
     if (!supabase) {
       return NextResponse.json(
@@ -70,6 +77,8 @@ export async function POST(request) {
       product_id,
       sku,
       attributes,
+      cost_price,
+      supplier_margin_percentage,
       price_adjustment,
       price_adjustment_type,
       stock_quantity,
@@ -79,6 +88,7 @@ export async function POST(request) {
       width,
       depth,
       image_url,
+      is_default,
       is_active
     } = body;
 
@@ -92,12 +102,18 @@ export async function POST(request) {
     // Generate SKU if not provided
     const variantSku = sku || `VAR-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+    if (is_default) {
+      await clearOtherDefaults(supabase, product_id, null);
+    }
+
     const { data, error } = await supabase
       .from('product_variants')
       .insert([{
         product_id,
         sku: variantSku,
         attributes,
+        cost_price: cost_price || null,
+        supplier_margin_percentage: supplier_margin_percentage || null,
         price_adjustment: price_adjustment || 0,
         price_adjustment_type: price_adjustment_type || 'fixed',
         stock_quantity: stock_quantity || 0,
@@ -107,12 +123,15 @@ export async function POST(request) {
         width,
         depth,
         image_url,
+        is_default: is_default || false,
         is_active: is_active !== undefined ? is_active : true
       }])
       .select()
       .single();
 
     if (error) throw error;
+
+    await syncProductFromVariants(product_id);
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
@@ -127,6 +146,11 @@ export async function POST(request) {
 // PUT - Update a variant
 export async function PUT(request) {
   try {
+    const auth = await requireAuth();
+    if (!auth.authenticated) {
+      return NextResponse.json({ success: false, error: 'Não autenticado' }, { status: 401 });
+    }
+
     const supabase = createServerClient();
     if (!supabase) {
       return NextResponse.json(
@@ -145,6 +169,20 @@ export async function PUT(request) {
       );
     }
 
+    const { data: current } = await supabase
+      .from('product_variants')
+      .select('product_id')
+      .eq('id', id)
+      .single();
+
+    if (!current) {
+      return NextResponse.json({ success: false, error: 'Variante não encontrada' }, { status: 404 });
+    }
+
+    if (updateData.is_default) {
+      await clearOtherDefaults(supabase, current.product_id, id);
+    }
+
     const { data, error } = await supabase
       .from('product_variants')
       .update(updateData)
@@ -153,6 +191,8 @@ export async function PUT(request) {
       .single();
 
     if (error) throw error;
+
+    await syncProductFromVariants(current.product_id);
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
@@ -167,6 +207,11 @@ export async function PUT(request) {
 // DELETE - Delete a variant
 export async function DELETE(request) {
   try {
+    const auth = await requireAuth();
+    if (!auth.authenticated) {
+      return NextResponse.json({ success: false, error: 'Não autenticado' }, { status: 401 });
+    }
+
     const supabase = createServerClient();
     if (!supabase) {
       return NextResponse.json(
@@ -185,12 +230,22 @@ export async function DELETE(request) {
       );
     }
 
+    const { data: current } = await supabase
+      .from('product_variants')
+      .select('product_id')
+      .eq('id', id)
+      .single();
+
     const { error } = await supabase
       .from('product_variants')
       .delete()
       .eq('id', id);
 
     if (error) throw error;
+
+    if (current) {
+      await syncProductFromVariants(current.product_id);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Fragment } from 'react';
 
 export default function StockManager({ products: initialProducts }) {
   const [products, setProducts] = useState(initialProducts || []);
@@ -9,12 +9,68 @@ export default function StockManager({ products: initialProducts }) {
   const [editingId, setEditingId] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [saving, setSaving] = useState(false);
+  const [expandedIds, setExpandedIds] = useState(new Set());
+  const [editingVariantId, setEditingVariantId] = useState(null);
+  const [editingVariantValue, setEditingVariantValue] = useState('');
+  const [savingVariant, setSavingVariant] = useState(false);
 
   // Classify stock status
-  const getStatus = (product) => {
-    if (product.stock_quantity <= 0) return 'out';
-    if (product.stock_quantity <= (product.low_stock_threshold || 10)) return 'low';
+  const getStatusFor = (quantity, threshold) => {
+    if (quantity <= 0) return 'out';
+    if (quantity <= (threshold || 10)) return 'low';
     return 'normal';
+  };
+  const getStatus = (product) => getStatusFor(product.stock_quantity, product.low_stock_threshold);
+
+  const toggleExpanded = (productId) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(productId)) next.delete(productId);
+      else next.add(productId);
+      return next;
+    });
+  };
+
+  const startEditVariant = (variant) => {
+    setEditingVariantId(variant.id);
+    setEditingVariantValue(String(variant.stockQuantity ?? 0));
+  };
+
+  const cancelEditVariant = () => {
+    setEditingVariantId(null);
+    setEditingVariantValue('');
+  };
+
+  const saveEditVariant = async (variant, productId) => {
+    const newQty = parseInt(editingVariantValue);
+    if (isNaN(newQty) || newQty < 0) return;
+
+    setSavingVariant(true);
+    try {
+      const res = await fetch('/api/product-variants', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ id: variant.id, stock_quantity: newQty }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setProducts(prev => prev.map(p => {
+          if (p.id !== productId) return p;
+          const updatedVariants = (p.variants || []).map(v => (v.id === variant.id ? { ...v, stockQuantity: newQty } : v));
+          const total = updatedVariants.reduce((sum, v) => sum + Math.max(0, v.stockQuantity || 0), 0);
+          return { ...p, variants: updatedVariants, stock_quantity: total };
+        }));
+      } else {
+        alert(`Erro: ${data.error}`);
+      }
+    } catch (err) {
+      console.error('Error updating variant stock:', err);
+      alert('Erro ao atualizar estoque da variante');
+    }
+    setSavingVariant(false);
+    setEditingVariantId(null);
+    setEditingVariantValue('');
   };
 
   // Summary stats
@@ -251,13 +307,29 @@ export default function StockManager({ products: initialProducts }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filtered.map((product) => (
-                  <tr key={product.id} className={`hover:bg-gray-50 transition-colors ${
+                {filtered.map((product) => {
+                  const hasVariants = product.variants && product.variants.length > 0;
+                  const isExpanded = expandedIds.has(product.id);
+
+                  return (
+                  <Fragment key={product.id}>
+                  <tr className={`hover:bg-gray-50 transition-colors ${
                     getStatus(product) === 'out' ? 'bg-red-50/50' :
                     getStatus(product) === 'low' ? 'bg-yellow-50/30' : ''
                   }`}>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
+                        {hasVariants && (
+                          <button
+                            onClick={() => toggleExpanded(product.id)}
+                            className="text-gray-400 hover:text-gray-700 flex-shrink-0"
+                            title={isExpanded ? 'Recolher SKUs' : `Ver ${product.variants.length} SKUs`}
+                          >
+                            <svg className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </button>
+                        )}
                         {product.image_url ? (
                           <img
                             src={product.image_url}
@@ -273,7 +345,10 @@ export default function StockManager({ products: initialProducts }) {
                         )}
                         <div>
                           <p className="font-medium text-gray-900 text-sm">{product.name}</p>
-                          <p className="text-xs text-gray-500">{product.category || 'Sem categoria'}</p>
+                          <p className="text-xs text-gray-500">
+                            {product.category || 'Sem categoria'}
+                            {hasVariants && ` · ${product.variants.length} SKU(s)`}
+                          </p>
                         </div>
                       </div>
                     </td>
@@ -281,7 +356,11 @@ export default function StockManager({ products: initialProducts }) {
                       <span className="text-sm text-gray-500 font-mono">{product.sku || '-'}</span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      {editingId === product.id ? (
+                      {hasVariants ? (
+                        <span className="text-sm font-bold text-gray-900" title="Soma de todos os SKUs ativos">
+                          {product.stock_quantity}
+                        </span>
+                      ) : editingId === product.id ? (
                         <input
                           type="number"
                           min="0"
@@ -311,7 +390,14 @@ export default function StockManager({ products: initialProducts }) {
                       {statusBadge(product)}
                     </td>
                     <td className="px-6 py-4 text-center">
-                      {editingId === product.id ? (
+                      {hasVariants ? (
+                        <button
+                          onClick={() => toggleExpanded(product.id)}
+                          className="text-xs font-medium text-blue-600 hover:underline"
+                        >
+                          {isExpanded ? 'Recolher' : 'Ver SKUs'}
+                        </button>
+                      ) : editingId === product.id ? (
                         <div className="flex items-center justify-center gap-1">
                           <button
                             onClick={() => saveEdit(product)}
@@ -346,7 +432,95 @@ export default function StockManager({ products: initialProducts }) {
                       )}
                     </td>
                   </tr>
-                ))}
+
+                  {hasVariants && isExpanded && product.variants.map((variant) => {
+                    const status = getStatusFor(variant.stockQuantity, variant.lowStockThreshold);
+                    const attrsLabel = Object.entries(variant.attributes || {}).map(([k, v]) => `${k}: ${v}`).join(' · ');
+                    return (
+                      <tr key={variant.id} className={`text-sm ${
+                        status === 'out' ? 'bg-red-50/40' : status === 'low' ? 'bg-yellow-50/20' : 'bg-gray-50/60'
+                      }`}>
+                        <td className="px-6 py-2.5 pl-16">
+                          <p className="text-gray-700">{attrsLabel || '—'}</p>
+                        </td>
+                        <td className="px-6 py-2.5">
+                          <span className="text-xs text-gray-500 font-mono">{variant.sku || '-'}</span>
+                        </td>
+                        <td className="px-6 py-2.5 text-center">
+                          {editingVariantId === variant.id ? (
+                            <input
+                              type="number"
+                              min="0"
+                              value={editingVariantValue}
+                              onChange={(e) => setEditingVariantValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') saveEditVariant(variant, product.id);
+                                if (e.key === 'Escape') cancelEditVariant();
+                              }}
+                              className="w-20 text-center border border-blue-400 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              autoFocus
+                            />
+                          ) : (
+                            <span className={`text-xs font-bold ${
+                              status === 'out' ? 'text-red-600' : status === 'low' ? 'text-yellow-600' : 'text-gray-700'
+                            }`}>
+                              {variant.stockQuantity}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-2.5 text-center">
+                          <span className="text-xs text-gray-500">{variant.lowStockThreshold || 10}</span>
+                        </td>
+                        <td className="px-6 py-2.5 text-center">
+                          {status === 'out' ? (
+                            <span className="text-[11px] font-semibold text-red-600">Esgotado</span>
+                          ) : status === 'low' ? (
+                            <span className="text-[11px] font-semibold text-yellow-600">Estoque Baixo</span>
+                          ) : (
+                            <span className="text-[11px] font-semibold text-green-600">Normal</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-2.5 text-center">
+                          {editingVariantId === variant.id ? (
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                onClick={() => saveEditVariant(variant, product.id)}
+                                disabled={savingVariant}
+                                className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors disabled:opacity-50"
+                                title="Salvar"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={cancelEditVariant}
+                                className="p-1 text-gray-400 hover:bg-gray-100 rounded transition-colors"
+                                title="Cancelar"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => startEditVariant(variant)}
+                              className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                              title="Editar estoque do SKU"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>

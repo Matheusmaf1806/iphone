@@ -8,6 +8,7 @@
 -- embutidas aqui — não tem problema rodar de novo):
 --   1. supabase/migrations/add_affiliate_id_to_user_ecommerce.sql
 --   2. supabase/migrations/add_pickup_info_to_orders.sql
+--   3. supabase/migrations/add_product_variant_system.sql
 --
 -- IMPORTANTE — leia antes de rodar:
 -- 1. Toda tabela tem RLS habilitado com uma policy permissiva ("allow all").
@@ -197,7 +198,7 @@ create table if not exists products (
   category_slug text,
   image_url text,
   price numeric(10,2),
-  cost_price numeric(10,2) not null,
+  cost_price numeric(10,2), -- pode ser null quando has_variants=true (custo vive em cada SKU)
   supplier_margin_percentage numeric(5,2) not null default 10,
   compare_at_price numeric(10,2),
   sku text,
@@ -220,6 +221,7 @@ create table if not exists products (
   featured_order integer,
   is_active boolean default true,
   is_featured boolean default false,
+  has_variants boolean not null default false, -- true = preço/custo/estoque vêm de product_variants
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -278,9 +280,11 @@ create table if not exists product_variants (
   id uuid primary key default gen_random_uuid(),
   product_id uuid not null references products(id) on delete cascade,
   sku text,
-  attributes jsonb not null default '{}'::jsonb, -- ex: {"Tamanho":"M"}
-  price_adjustment numeric(10,2) default 0,
-  price_adjustment_type text default 'fixed',    -- fixed | percentage
+  attributes jsonb not null default '{}'::jsonb, -- ex: {"Cor":"Titânio Azul","Armazenamento":"256GB"}
+  cost_price numeric(10,2),                      -- custo real do SKU (cada capacidade custa diferente)
+  supplier_margin_percentage numeric(5,2),        -- opcional: se nulo, herda a margem do produto
+  price_adjustment numeric(10,2) default 0,       -- legado, não usado por produtos com has_variants
+  price_adjustment_type text default 'fixed',     -- fixed | percentage
   stock_quantity integer default 0,
   low_stock_threshold integer default 10,
   weight numeric,
@@ -288,6 +292,7 @@ create table if not exists product_variants (
   width numeric,
   depth numeric,
   image_url text,
+  is_default boolean not null default false,      -- variante pré-selecionada na página do produto
   is_active boolean default true,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
@@ -301,12 +306,32 @@ create trigger trg_product_variants_updated_at
   for each row execute function set_updated_at();
 
 -- =====================================================================
+-- 8b. product_variant_values — catálogo global reutilizável de valores por
+-- tipo de atributo (ex: tipo "Cor" -> valor "Titânio Azul" com swatch_hex).
+-- Cadastrar um valor aqui uma vez o torna disponível para qualquer produto.
+-- =====================================================================
+
+create table if not exists product_variant_values (
+  id uuid primary key default gen_random_uuid(),
+  variant_type_id uuid not null references product_variant_types(id) on delete cascade,
+  value text not null,
+  swatch_hex text,
+  display_order integer not null default 0,
+  is_active boolean not null default true,
+  created_at timestamptz default now(),
+  unique (variant_type_id, value)
+);
+
+create index if not exists idx_product_variant_values_type_id on product_variant_values(variant_type_id, display_order);
+
+-- =====================================================================
 -- 9. stock_movements — histórico de entradas/saídas de estoque
 -- =====================================================================
 
 create table if not exists stock_movements (
   id uuid primary key default gen_random_uuid(),
   product_id uuid not null references products(id) on delete cascade,
+  product_variant_id uuid references product_variants(id), -- null = movimentação do produto simples
   quantity integer not null,
   movement_type text not null,  -- in | out | return | adjustment
   reason text,
@@ -318,6 +343,7 @@ create table if not exists stock_movements (
 );
 
 create index if not exists idx_stock_movements_product_id on stock_movements(product_id, created_at desc);
+create index if not exists idx_stock_movements_product_variant_id on stock_movements(product_variant_id, created_at desc);
 
 -- =====================================================================
 -- 11. affiliate_product_commissions — comissão customizada por produto
@@ -413,6 +439,9 @@ create table if not exists order_items (
   id uuid primary key default gen_random_uuid(),
   order_id uuid not null references orders(id) on delete cascade,
   product_id uuid references products(id),
+  product_variant_id uuid references product_variants(id),
+  variant_attributes jsonb,      -- retrato da variante no momento da compra, ex: {"Cor":"Azul"}
+  variant_sku text,
   product_name text not null default '',
   product_image_url text,
   quantity integer not null,
@@ -571,6 +600,58 @@ values (
 )
 on conflict (username) do nothing;
 
+-- Tipos de atributo de variação + valores comuns de iPhone (catálogo inicial,
+-- editável depois pelo admin em /gestao)
+insert into product_variant_types (name, is_active, display_order) values
+  ('Versão', true, 1),
+  ('Cor', true, 2),
+  ('Armazenamento', true, 3)
+on conflict (name) do nothing;
+
+insert into product_variant_values (variant_type_id, value, display_order)
+select t.id, v.value, v.display_order
+from product_variant_types t
+join (values
+  ('Versão', 'Standard', 1),
+  ('Versão', 'Plus', 2),
+  ('Versão', 'Pro', 3),
+  ('Versão', 'Pro Max', 4),
+  ('Versão', 'Mini', 5)
+) as v(type_name, value, display_order) on v.type_name = t.name
+on conflict (variant_type_id, value) do nothing;
+
+insert into product_variant_values (variant_type_id, value, swatch_hex, display_order)
+select t.id, v.value, v.swatch_hex, v.display_order
+from product_variant_types t
+join (values
+  ('Cor', 'Titânio Natural', '#8A8A7E', 1),
+  ('Cor', 'Titânio Azul', '#3B5473', 2),
+  ('Cor', 'Titânio Branco', '#F0EFE7', 3),
+  ('Cor', 'Titânio Preto', '#3B3B3D', 4),
+  ('Cor', 'Titânio Deserto', '#8C7A63', 5),
+  ('Cor', 'Preto', '#1D1D1F', 6),
+  ('Cor', 'Branco', '#F5F5F0', 7),
+  ('Cor', 'Rosa', '#F4CFDA', 8),
+  ('Cor', 'Azul', '#4F6D89', 9),
+  ('Cor', 'Verde', '#5C6E58', 10),
+  ('Cor', 'Amarelo', '#F0E0A8', 11),
+  ('Cor', 'Roxo', '#7D7191', 12)
+) as v(type_name, value, swatch_hex, display_order) on v.type_name = t.name
+on conflict (variant_type_id, value) do nothing;
+
+insert into product_variant_values (variant_type_id, value, display_order)
+select t.id, v.value, v.display_order
+from product_variant_types t
+join (values
+  ('Armazenamento', '64GB', 1),
+  ('Armazenamento', '128GB', 2),
+  ('Armazenamento', '256GB', 3),
+  ('Armazenamento', '512GB', 4),
+  ('Armazenamento', '1TB', 5),
+  ('Armazenamento', '2TB', 6)
+) as v(type_name, value, display_order) on v.type_name = t.name
+on conflict (variant_type_id, value) do nothing;
+
 -- =====================================================================
 -- ROW LEVEL SECURITY — habilitar + policy permissiva em todas as tabelas
 -- (ver nota de segurança no topo do arquivo: a proteção real é feita
@@ -584,7 +665,7 @@ begin
   foreach t in array array[
     'admin_users', 'affiliates', 'affiliate_users', 'user_ecommerce',
     'products', 'product_images', 'product_details', 'product_variant_types',
-    'product_variants', 'stock_movements',
+    'product_variants', 'product_variant_values', 'stock_movements',
     'affiliate_product_commissions', 'orders', 'order_items', 'payments',
     'coupons', 'coupon_usage', 'affiliate_sales', 'affiliate_withdrawals',
     'platform_config'

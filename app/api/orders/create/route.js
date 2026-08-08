@@ -3,6 +3,7 @@ import { createServerClient } from '../../../../lib/supabase/server';
 import { calculateAllPrices } from '../../../../lib/pricing';
 import { getPlatformConfig } from '../../../../lib/affiliateTracking';
 import { registerCouponUsage } from '../../../../lib/coupons';
+import { updateStock, updateVariantStock } from '../../../../lib/products';
 
 export async function POST(request) {
   try {
@@ -56,23 +57,80 @@ export async function POST(request) {
     let totalSupplierAmount = 0;
     let totalCardFee = 0;
 
-    // Buscar nomes dos produtos
-    const productIds = items.map(item => item.productId);
+    // Buscar dados autoritativos de produtos e variantes no banco — nunca confiar em
+    // preço/custo vindos do cliente (o que o browser manda em costPrice/supplierMarginPercentage
+    // é ignorado a partir daqui, só quantity/productId/variantId são usados).
+    const productIds = [...new Set(items.map(item => item.productId))];
+    const variantIds = [...new Set(items.filter(item => item.variantId).map(item => item.variantId))];
+
     const { data: products } = await supabase
       .from('products')
-      .select('id, name')
+      .select('id, name, cost_price, supplier_margin_percentage, stock_type, stock_quantity')
       .in('id', productIds);
-    const productNameMap = Object.fromEntries((products || []).map(p => [p.id, p.name]));
+    const productMap = Object.fromEntries((products || []).map(p => [p.id, p]));
+
+    let variantMap = {};
+    if (variantIds.length > 0) {
+      const { data: variants } = await supabase
+        .from('product_variants')
+        .select('id, product_id, sku, attributes, cost_price, supplier_margin_percentage, stock_quantity, is_active')
+        .in('id', variantIds);
+      variantMap = Object.fromEntries((variants || []).map(v => [v.id, v]));
+    }
+
+    // Checar produto/variante válidos, custo configurado e estoque suficiente antes de
+    // criar qualquer coisa no banco.
+    for (const item of items) {
+      const product = productMap[item.productId];
+      if (!product) {
+        return NextResponse.json({ success: false, error: 'Produto não encontrado' }, { status: 400 });
+      }
+
+      if (item.variantId) {
+        const variant = variantMap[item.variantId];
+        if (!variant || variant.is_active === false || variant.product_id !== item.productId) {
+          return NextResponse.json({ success: false, error: `Variante indisponível para ${product.name}` }, { status: 400 });
+        }
+        if (variant.cost_price == null) {
+          return NextResponse.json({ success: false, error: `${product.name} está sem preço configurado` }, { status: 400 });
+        }
+        if (variant.stock_quantity < item.quantity) {
+          const attrs = Object.entries(variant.attributes || {}).map(([k, v]) => `${k}: ${v}`).join(', ');
+          return NextResponse.json({
+            success: false,
+            error: `Estoque insuficiente para ${product.name}${attrs ? ' — ' + attrs : ''} (disponível: ${Math.max(variant.stock_quantity, 0)})`,
+          }, { status: 400 });
+        }
+      } else {
+        if (product.cost_price == null) {
+          return NextResponse.json({ success: false, error: `${product.name} está sem preço configurado` }, { status: 400 });
+        }
+        if (product.stock_type === 'limited' && product.stock_quantity !== -1 && product.stock_quantity < item.quantity) {
+          return NextResponse.json({
+            success: false,
+            error: `Estoque insuficiente para ${product.name} (disponível: ${Math.max(product.stock_quantity, 0)})`,
+          }, { status: 400 });
+        }
+      }
+    }
 
     const itemsWithPrices = items.map(item => {
+      const product = productMap[item.productId];
+      const variant = item.variantId ? variantMap[item.variantId] : null;
+
+      const costPrice = parseFloat(variant ? variant.cost_price : product.cost_price);
+      const supplierMarginPercentage = parseFloat(
+        (variant?.supplier_margin_percentage ?? product.supplier_margin_percentage)
+      );
+
       // Use customMarkup from agent if provided, otherwise use affiliate commission or default
       const affiliateMargin = (item.customMarkup !== null && item.customMarkup !== undefined)
         ? item.customMarkup
         : (affiliate?.commission_rate || config.defaultAffiliateMargin);
 
       const prices = calculateAllPrices({
-        costPrice: item.costPrice,
-        supplierMarginPercentage: item.supplierMarginPercentage,
+        costPrice,
+        supplierMarginPercentage,
         affiliateMarginPercentage: affiliateMargin,
         cardFeePercentage: config.cardFeePercentage,
       });
@@ -93,10 +151,13 @@ export async function POST(request) {
 
       return {
         product_id: item.productId,
-        product_name: productNameMap[item.productId] || '',
+        product_variant_id: variant?.id || null,
+        variant_attributes: variant?.attributes || null,
+        variant_sku: variant?.sku || null,
+        product_name: product.name,
         quantity: item.quantity,
         cost_price: prices.costPrice,
-        supplier_margin_percentage: item.supplierMarginPercentage,
+        supplier_margin_percentage: supplierMarginPercentage,
         affiliate_margin_percentage: affiliateMargin,
         card_fee_percentage: isPix ? 0 : config.cardFeePercentage,
         net_price: prices.netPrice,
@@ -171,6 +232,22 @@ export async function POST(request) {
         success: false,
         error: 'Erro ao criar itens do pedido',
       }, { status: 500 });
+    }
+
+    // Baixar estoque (por SKU quando o item tem variante, senão no produto simples)
+    for (const item of items) {
+      try {
+        if (item.variantId) {
+          await updateVariantStock(item.variantId, item.quantity, 'out', `Pedido ${order.order_number}`);
+        } else {
+          const product = productMap[item.productId];
+          if (product?.stock_type === 'limited' && product.stock_quantity !== -1) {
+            await updateStock(item.productId, item.quantity, 'out', `Pedido ${order.order_number}`);
+          }
+        }
+      } catch (stockErr) {
+        console.error('Error decrementing stock for order', order.id, stockErr);
+      }
     }
 
     // Se for PIX, criar registro de pagamento pendente
