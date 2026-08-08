@@ -32,7 +32,7 @@ export async function GET() {
 
     const { data: affiliate, error } = await supabase
       .from('affiliates')
-      .select('logo_url, favicon_url, primary_color, background_color, button_color, button_text_color, button_hover')
+      .select('logo_url, favicon_url, primary_color, background_color, button_color, button_text_color, button_hover, instagram_handle, whatsapp_number')
       .eq('id', session.affiliateId)
       .single();
 
@@ -56,6 +56,8 @@ export async function GET() {
         buttonColor: affiliate.button_color || '#0043f7',
         buttonTextColor: affiliate.button_text_color || '#0c0e0b',
         buttonHover: affiliate.button_hover || '#0036c6',
+        instagramHandle: affiliate.instagram_handle || '',
+        whatsappNumber: affiliate.whatsapp_number || '',
       },
     });
   } catch (error) {
@@ -115,6 +117,8 @@ export async function POST(request) {
       button_color: body.buttonColor || null,
       button_text_color: body.buttonTextColor || null,
       button_hover: body.buttonHover || null,
+      instagram_handle: body.instagramHandle ? body.instagramHandle.trim().replace(/^@/, '') : null,
+      whatsapp_number: body.whatsappNumber ? body.whatsappNumber.replace(/\D/g, '') : null,
       updated_at: new Date().toISOString(),
     };
 

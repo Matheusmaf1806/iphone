@@ -26,6 +26,8 @@ export function useAffiliate() {
       buttonHover: '#0036c6',
       name: SITE_NAME,
       logo: '',
+      instagram: '',
+      whatsapp: '',
     };
   }
   return context;

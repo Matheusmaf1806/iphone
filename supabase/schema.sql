@@ -95,6 +95,8 @@ create table if not exists affiliates (
   button_color text default '#0043f7',
   button_text_color text default '#ffffff',
   button_hover text default '#0036c6',
+  instagram_handle text,
+  whatsapp_number text,
   commission_rate numeric(5,2) not null default 10.00, -- percentual (0-100), não fração
   cnpj text,
   tax text,
