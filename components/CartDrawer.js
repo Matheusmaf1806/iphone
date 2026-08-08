@@ -53,7 +53,7 @@ export default function CartDrawer() {
     if (agentSession && cart.length > 0) {
       const initial = {};
       cart.forEach(item => {
-        initial[item.id] = item.customMarkup !== undefined ? item.customMarkup : '';
+        initial[item.lineId] = item.customMarkup !== undefined ? item.customMarkup : '';
       });
       setMarkupValues(initial);
     }
@@ -65,10 +65,10 @@ export default function CartDrawer() {
   };
 
   const handleApplyMarkup = () => {
-    Object.entries(markupValues).forEach(([productId, markup]) => {
+    Object.entries(markupValues).forEach(([lineId, markup]) => {
       const numericMarkup = parseFloat(markup);
       if (!isNaN(numericMarkup) && numericMarkup >= 0) {
-        updateQuantity(parseInt(productId), cart.find(i => i.id === parseInt(productId))?.quantity || 1, numericMarkup);
+        updateQuantity(lineId, cart.find(i => i.lineId === lineId)?.quantity || 1, numericMarkup);
       }
     });
     setShowMarkupModal(false);
@@ -182,7 +182,7 @@ export default function CartDrawer() {
             <div className="space-y-2">
               {cart.map((item) => (
                 <div
-                  key={item.id}
+                  key={item.lineId}
                   className="flex gap-3 p-2 bg-white rounded-lg shadow-sm hover:shadow-md transition-all border border-gray-100"
                   style={{ borderColor: 'rgb(243 244 246)' }}
                   onMouseEnter={(e) => e.currentTarget.style.borderColor = affiliate.buttonColor || '#0043f7'}
@@ -210,20 +210,25 @@ export default function CartDrawer() {
                         {item.name}
                       </h3>
                       <button
-                        onClick={() => removeFromCart(item.id)}
+                        onClick={() => removeFromCart(item.lineId)}
                         className="text-red-500 hover:text-red-700 transition-colors flex-shrink-0"
                         title="Remover"
                       >
                         <i className="fas fa-trash-alt text-xs"></i>
                       </button>
                     </div>
+                    {item.attributes && Object.keys(item.attributes).length > 0 && (
+                      <p className="text-[10px] text-gray-500 -mt-1 mb-1 truncate">
+                        {Object.entries(item.attributes).map(([k, v]) => `${k}: ${v}`).join(' · ')}
+                      </p>
+                    )}
 
                     {/* Price e Quantity na mesma linha */}
                     <div className="flex items-center justify-between mt-2">
                       {/* Quantity Controls - Compacto */}
                       <div className="flex items-center gap-1 bg-gray-100 rounded-full px-1 py-0.5">
                         <button
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          onClick={() => updateQuantity(item.lineId, item.quantity - 1)}
                           className="w-5 h-5 flex items-center justify-center bg-white rounded-full transition-all"
                           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = affiliate.buttonColor || '#0043f7'}
                           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
@@ -234,7 +239,7 @@ export default function CartDrawer() {
                           {item.quantity}
                         </span>
                         <button
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          onClick={() => updateQuantity(item.lineId, item.quantity + 1)}
                           className="w-5 h-5 flex items-center justify-center rounded-full transition-all"
                           style={{
                             backgroundColor: affiliate.buttonColor || '#0043f7',
@@ -447,7 +452,7 @@ export default function CartDrawer() {
                 </p>
                 <div className="space-y-3">
                   {cart.map((item) => (
-                    <div key={item.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div key={item.lineId} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                       {(item.image_url || item.image) && (
                         <img
                           src={item.image_url || item.image}
@@ -465,10 +470,10 @@ export default function CartDrawer() {
                           min="0"
                           max="100"
                           step="0.5"
-                          value={markupValues[item.id] || ''}
+                          value={markupValues[item.lineId] || ''}
                           onChange={(e) => setMarkupValues(prev => ({
                             ...prev,
-                            [item.id]: e.target.value
+                            [item.lineId]: e.target.value
                           }))}
                           placeholder="0"
                           className="w-16 px-2 py-1.5 border border-gray-300 rounded-lg text-xs text-center focus:outline-none focus:border-amber-500"

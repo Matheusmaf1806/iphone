@@ -72,6 +72,8 @@ export async function GET(request) {
         id: item.id,
         productName: item.product_name,
         productImage: item.product?.image_url || item.product_image_url,
+        variantAttributes: item.variant_attributes || null,
+        variantSku: item.variant_sku || null,
         quantity: item.quantity,
         price: parseFloat(item.final_price),
         commission: parseFloat(item.affiliate_amount_unit) * item.quantity,

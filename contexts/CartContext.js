@@ -21,7 +21,13 @@ export function CartProvider({ children }) {
     const savedCart = localStorage.getItem('cart');
     if (savedCart) {
       try {
-        setCart(JSON.parse(savedCart));
+        const parsed = JSON.parse(savedCart);
+        // Carrinhos salvos antes do suporte a variantes não têm lineId — preenche
+        // com o mesmo valor que addToCart usaria, pra não colidir itens diferentes.
+        setCart(parsed.map(item => ({
+          ...item,
+          lineId: item.lineId || (item.variantId ? `${item.id}:${item.variantId}` : item.id),
+        })));
       } catch (error) {
         console.error('Error loading cart:', error);
       }
@@ -34,18 +40,22 @@ export function CartProvider({ children }) {
   }, [cart]);
 
   const addToCart = (product, quantity = 1) => {
+    // Duas variantes do mesmo produto (ex: cores diferentes) precisam virar linhas
+    // separadas no carrinho — a identidade da linha inclui o SKU quando existe.
+    const lineId = product.variantId ? `${product.id}:${product.variantId}` : product.id;
+
     setCart(prevCart => {
-      const existingItem = prevCart.find(item => item.id === product.id);
+      const existingItem = prevCart.find(item => item.lineId === lineId);
 
       if (existingItem) {
         return prevCart.map(item =>
-          item.id === product.id
+          item.lineId === lineId
             ? { ...item, quantity: item.quantity + quantity }
             : item
         );
       }
 
-      return [...prevCart, { ...product, quantity }];
+      return [...prevCart, { ...product, lineId, quantity }];
     });
 
     // Mostrar notificação
@@ -56,19 +66,19 @@ export function CartProvider({ children }) {
     setTimeout(() => setIsOpen(false), 3000);
   };
 
-  const removeFromCart = (productId) => {
-    setCart(prevCart => prevCart.filter(item => item.id !== productId));
+  const removeFromCart = (lineId) => {
+    setCart(prevCart => prevCart.filter(item => item.lineId !== lineId));
   };
 
-  const updateQuantity = (productId, quantity, customMarkup) => {
+  const updateQuantity = (lineId, quantity, customMarkup) => {
     if (quantity <= 0) {
-      removeFromCart(productId);
+      removeFromCart(lineId);
       return;
     }
 
     setCart(prevCart =>
       prevCart.map(item => {
-        if (item.id === productId) {
+        if (item.lineId === lineId) {
           const updated = { ...item, quantity };
           if (customMarkup !== undefined) {
             updated.customMarkup = customMarkup;
@@ -80,10 +90,10 @@ export function CartProvider({ children }) {
     );
   };
 
-  const setItemCustomMarkup = (productId, markup) => {
+  const setItemCustomMarkup = (lineId, markup) => {
     setCart(prevCart =>
       prevCart.map(item =>
-        item.id === productId ? { ...item, customMarkup: markup } : item
+        item.lineId === lineId ? { ...item, customMarkup: markup } : item
       )
     );
   };

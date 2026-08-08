@@ -23,10 +23,18 @@ export async function POST(request) {
 
     const { product } = await request.json();
 
-    // Validar campos obrigatórios (price é calculado automaticamente)
-    if (!product.name || !product.slug || !product.cost_price || !product.supplier_margin_percentage) {
+    // Validar campos obrigatórios. Produtos com variações (has_variants) não têm
+    // custo próprio — o custo vive em cada SKU e price/cost_price são calculados
+    // automaticamente quando as variantes são salvas.
+    if (!product.name || !product.slug || !product.supplier_margin_percentage) {
       return NextResponse.json(
-        { success: false, error: 'Campos obrigatórios faltando (name, slug, cost_price, supplier_margin_percentage)' },
+        { success: false, error: 'Campos obrigatórios faltando (name, slug, supplier_margin_percentage)' },
+        { status: 400 }
+      );
+    }
+    if (!product.has_variants && !product.cost_price) {
+      return NextResponse.json(
+        { success: false, error: 'Campo obrigatório faltando (cost_price)' },
         { status: 400 }
       );
     }
@@ -40,11 +48,12 @@ export async function POST(request) {
       meta_title: product.meta_title || null,
       meta_description: product.meta_description || null,
       image_url: product.image_url || null,
-      price: parseFloat(product.price),
+      price: product.price ? parseFloat(product.price) : null,
       cost_price: product.cost_price ? parseFloat(product.cost_price) : null,
       supplier_margin_percentage: parseFloat(product.supplier_margin_percentage),
       sku: product.sku || null,
-      stock_type: product.stock_type || 'unlimited',
+      has_variants: product.has_variants || false,
+      stock_type: product.has_variants ? 'limited' : (product.stock_type || 'unlimited'),
       stock_quantity: parseInt(product.stock_quantity) || 0,
       low_stock_threshold: parseInt(product.low_stock_threshold) || 10,
       weight: product.weight ? parseFloat(product.weight) : null,
@@ -139,11 +148,12 @@ export async function PUT(request) {
       meta_title: product.meta_title || null,
       meta_description: product.meta_description || null,
       image_url: product.image_url || null,
-      price: parseFloat(product.price),
+      price: product.price ? parseFloat(product.price) : null,
       cost_price: product.cost_price ? parseFloat(product.cost_price) : null,
       supplier_margin_percentage: parseFloat(product.supplier_margin_percentage),
       sku: product.sku || null,
-      stock_type: product.stock_type || 'unlimited',
+      has_variants: product.has_variants || false,
+      stock_type: product.has_variants ? 'limited' : (product.stock_type || 'unlimited'),
       stock_quantity: parseInt(product.stock_quantity) || 0,
       low_stock_threshold: parseInt(product.low_stock_threshold) || 10,
       weight: product.weight ? parseFloat(product.weight) : null,

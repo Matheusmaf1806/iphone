@@ -109,8 +109,8 @@ export default function CheckoutForm({ config }) {
       if (item.costPrice || item.cost_price) {
         const costPrice = item.costPrice || item.cost_price;
         const supplierMargin = item.supplierMarginPercentage || item.supplier_margin_percentage || 10;
-        const affiliateMargin = (itemMarginOverrides[item.id] !== undefined)
-          ? itemMarginOverrides[item.id]
+        const affiliateMargin = (itemMarginOverrides[item.lineId] !== undefined)
+          ? itemMarginOverrides[item.lineId]
           : (item.customMarkup !== undefined && item.customMarkup !== ''
             ? parseFloat(item.customMarkup)
             : (affiliate?.commission_percentage || config.defaultAffiliateMargin));
@@ -136,8 +136,8 @@ export default function CheckoutForm({ config }) {
         : (affiliate?.commission_percentage || config.defaultAffiliateMargin);
       const basePixPrice = item.pixPrice || item.price || 0;
       const netPrice = basePixPrice * (1 - originalMargin / 100);
-      const affiliateMargin = (itemMarginOverrides[item.id] !== undefined)
-        ? itemMarginOverrides[item.id]
+      const affiliateMargin = (itemMarginOverrides[item.lineId] !== undefined)
+        ? itemMarginOverrides[item.lineId]
         : originalMargin;
       const newPixPrice = netPrice / (1 - affiliateMargin / 100);
       const newCardPrice = newPixPrice / (1 - config.cardFeePercentage / 100);
@@ -461,11 +461,14 @@ export default function CheckoutForm({ config }) {
         },
         items: itemsWithPrices.map(item => ({
           productId: item.id,
+          variantId: item.variantId || null,
+          sku: item.sku || null,
+          attributes: item.attributes || null,
           quantity: item.quantity,
           costPrice: item.costPrice || item.cost_price || 0,
           supplierMarginPercentage: item.supplierMarginPercentage || item.supplier_margin_percentage || 10,
-          customMarkup: (itemMarginOverrides[item.id] !== undefined)
-            ? itemMarginOverrides[item.id]
+          customMarkup: (itemMarginOverrides[item.lineId] !== undefined)
+            ? itemMarginOverrides[item.lineId]
             : (item.customMarkup !== undefined ? parseFloat(item.customMarkup) : null),
         })),
         affiliateId: affiliate?.affiliateId || affiliate?.id || null,
@@ -1199,7 +1202,7 @@ export default function CheckoutForm({ config }) {
                 const itemTotal = price * item.quantity;
 
                 return (
-                  <div key={item.id} className="flex gap-4">
+                  <div key={item.lineId} className="flex gap-4">
                     <img
                       src={item.image_url || item.image}
                       alt={item.name}
@@ -1207,6 +1210,11 @@ export default function CheckoutForm({ config }) {
                     />
                     <div className="flex-1">
                       <h4 className="text-sm font-semibold text-gray-900">{item.name}</h4>
+                      {item.attributes && Object.keys(item.attributes).length > 0 && (
+                        <p className="text-[11px] text-gray-500">
+                          {Object.entries(item.attributes).map(([k, v]) => `${k}: ${v}`).join(' · ')}
+                        </p>
+                      )}
                       <p className="text-xs text-gray-600">Qtd: {item.quantity}</p>
                       <p className="text-sm font-bold " style={{ color: affiliate.buttonColor || '#0043f7' }}>
                         R$ {itemTotal.toFixed(2).replace('.', ',')}
@@ -1302,12 +1310,12 @@ export default function CheckoutForm({ config }) {
                     onClick={() => {
                       const inputs = {};
                       cartItems.forEach(item => {
-                        const current = itemMarginOverrides[item.id] !== undefined
-                          ? itemMarginOverrides[item.id]
+                        const current = itemMarginOverrides[item.lineId] !== undefined
+                          ? itemMarginOverrides[item.lineId]
                           : (item.customMarkup !== undefined && item.customMarkup !== ''
                             ? parseFloat(item.customMarkup)
                             : (affiliate?.commission_percentage || config.defaultAffiliateMargin));
-                        inputs[item.id] = String(current);
+                        inputs[item.lineId] = String(current);
                       });
                       setModalMarginInputs(inputs);
                       setPrevMarginOverrides({ ...itemMarginOverrides });
@@ -1364,7 +1372,7 @@ export default function CheckoutForm({ config }) {
 
           <div className="space-y-4">
             {cartItems.map(item => {
-              const rawInput = modalMarginInputs[item.id] ?? String(affiliate?.commission_percentage || config.defaultAffiliateMargin);
+              const rawInput = modalMarginInputs[item.lineId] ?? String(affiliate?.commission_percentage || config.defaultAffiliateMargin);
               const marginVal = parseFloat(rawInput);
               const valid = !isNaN(marginVal) && marginVal >= 0 && marginVal < 100;
               const costPrice = item.costPrice || item.cost_price;
@@ -1389,7 +1397,7 @@ export default function CheckoutForm({ config }) {
               }
 
               return (
-                <div key={item.id} className="border-2 border-gray-100 rounded-xl p-4">
+                <div key={item.lineId} className="border-2 border-gray-100 rounded-xl p-4">
                   <div className="flex gap-3 mb-3">
                     <img
                       src={item.image_url || item.image}
@@ -1398,6 +1406,11 @@ export default function CheckoutForm({ config }) {
                     />
                     <div className="flex-1 min-w-0">
                       <h4 className="text-sm font-semibold text-gray-900 truncate">{item.name}</h4>
+                      {item.attributes && Object.keys(item.attributes).length > 0 && (
+                        <p className="text-[11px] text-gray-500 truncate">
+                          {Object.entries(item.attributes).map(([k, v]) => `${k}: ${v}`).join(' · ')}
+                        </p>
+                      )}
                       <p className="text-xs text-gray-500">Qtd: {item.quantity}</p>
                     </div>
                   </div>
@@ -1412,10 +1425,10 @@ export default function CheckoutForm({ config }) {
                       value={rawInput}
                       onChange={(e) => {
                         const newVal = e.target.value;
-                        setModalMarginInputs(prev => ({ ...prev, [item.id]: newVal }));
+                        setModalMarginInputs(prev => ({ ...prev, [item.lineId]: newVal }));
                         const parsed = parseFloat(newVal);
                         if (!isNaN(parsed) && parsed >= 0 && parsed < 100) {
-                          setItemMarginOverrides(prev => ({ ...prev, [item.id]: parsed }));
+                          setItemMarginOverrides(prev => ({ ...prev, [item.lineId]: parsed }));
                         }
                       }}
                       className="w-20 px-2 py-1 border-2 border-gray-200 rounded-lg text-sm text-center focus:outline-none focus:border-blue-400"

@@ -1,493 +1,555 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Loader from '../Loader';
 
-export default function ProductVariantsManager({ productId, onClose }) {
-  const [variants, setVariants] = useState([]);
-  const [variantTypes, setVariantTypes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [editingVariant, setEditingVariant] = useState(null);
-  const [showForm, setShowForm] = useState(false);
+// Gera um sufixo de SKU legível a partir dos valores do atributo, ex: {"Cor":"Titânio Azul","Armazenamento":"256GB"} -> "TITAZU-256GB"
+function suggestSkuSuffix(attributes) {
+  return Object.values(attributes)
+    .map(v => String(v).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 6))
+    .join('-');
+}
 
-  const [formData, setFormData] = useState({
-    attributes: {},
-    price_adjustment: 0,
-    price_adjustment_type: 'fixed',
-    stock_quantity: 0,
-    low_stock_threshold: 10,
-    sku: '',
-    image_url: '',
-    weight: '',
-    height: '',
-    width: '',
-    depth: '',
-    is_active: true,
-  });
+function attributesKey(attributes) {
+  return Object.keys(attributes).sort().map(k => `${k}:${attributes[k]}`).join('|');
+}
+
+function cartesianProduct(axisValuePairs) {
+  // axisValuePairs: [{ typeName, values: [string, ...] }, ...]
+  return axisValuePairs.reduce((acc, axis) => {
+    if (axis.values.length === 0) return acc;
+    const next = [];
+    for (const combo of acc) {
+      for (const value of axis.values) {
+        next.push({ ...combo, [axis.typeName]: value });
+      }
+    }
+    return next;
+  }, [{}]);
+}
+
+export default function ProductVariantsManager({ productId, productName, productSku, defaultMargin, onClose }) {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [axisTypes, setAxisTypes] = useState([]); // [{id, name, values: [{id, value, swatch_hex}]}]
+  const [selectedTypeIds, setSelectedTypeIds] = useState(new Set());
+  const [selectedValueIds, setSelectedValueIds] = useState({}); // { [typeId]: Set(valueId) }
+  const [rows, setRows] = useState([]); // linhas da matriz (existentes + rascunho)
+  const [newTypeName, setNewTypeName] = useState('');
+  const [newValueDrafts, setNewValueDrafts] = useState({}); // { [typeId]: { value, swatch_hex } }
+  const [bulkCost, setBulkCost] = useState('');
+  const [bulkStock, setBulkStock] = useState('');
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId]);
 
   const loadData = async () => {
+    setLoading(true);
+    setError('');
     try {
-      setLoading(true);
-
-      // Carregar tipos de variantes
-      const typesRes = await fetch('/api/product-variants?types=true');
+      const [typesRes, variantsRes] = await Promise.all([
+        fetch('/api/product-variant-types?withValues=true'),
+        fetch(`/api/product-variants?productId=${productId}`),
+      ]);
       const typesData = await typesRes.json();
-      if (typesData.success) {
-        setVariantTypes(typesData.data);
-      }
+      const variantsData = await variantsRes.json();
 
-      // Carregar variantes do produto
-      if (productId) {
-        const variantsRes = await fetch(`/api/product-variants?productId=${productId}`);
-        const variantsData = await variantsRes.json();
-        if (variantsData.success) {
-          setVariants(variantsData.data);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading data:', error);
-      alert('Erro ao carregar dados das variantes');
+      const types = typesData.success ? typesData.data : [];
+      setAxisTypes(types);
+
+      const existingVariants = variantsData.success ? variantsData.data : [];
+
+      // Deduzir quais eixos/valores já estão em uso a partir das variantes existentes
+      const usedTypeIds = new Set();
+      const usedValueIds = {};
+      existingVariants.forEach(v => {
+        Object.keys(v.attributes || {}).forEach(typeName => {
+          const type = types.find(t => t.name === typeName);
+          if (!type) return;
+          usedTypeIds.add(type.id);
+          const value = v.attributes[typeName];
+          const valueObj = (type.values || []).find(val => val.value === value);
+          if (valueObj) {
+            if (!usedValueIds[type.id]) usedValueIds[type.id] = new Set();
+            usedValueIds[type.id].add(valueObj.id);
+          }
+        });
+      });
+
+      setSelectedTypeIds(usedTypeIds);
+      setSelectedValueIds(usedValueIds);
+      setRows(existingVariants.map(v => ({
+        _key: v.id,
+        id: v.id,
+        attributes: v.attributes || {},
+        cost_price: v.cost_price ?? '',
+        supplier_margin_percentage: v.supplier_margin_percentage ?? '',
+        stock_quantity: v.stock_quantity ?? 0,
+        low_stock_threshold: v.low_stock_threshold ?? 10,
+        sku: v.sku || '',
+        image_url: v.image_url || '',
+        is_default: v.is_default || false,
+        is_active: v.is_active !== false,
+      })));
+    } catch (err) {
+      console.error('Error loading variant data:', err);
+      setError('Erro ao carregar dados de variantes');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const toggleType = (typeId) => {
+    setSelectedTypeIds(prev => {
+      const next = new Set(prev);
+      if (next.has(typeId)) {
+        next.delete(typeId);
+      } else {
+        next.add(typeId);
+      }
+      return next;
+    });
+  };
 
-    // Validar atributos
-    if (Object.keys(formData.attributes).length === 0) {
-      alert('Adicione pelo menos um atributo à variante');
+  const toggleValue = (typeId, valueId) => {
+    setSelectedValueIds(prev => {
+      const current = new Set(prev[typeId] || []);
+      if (current.has(valueId)) {
+        current.delete(valueId);
+      } else {
+        current.add(valueId);
+      }
+      return { ...prev, [typeId]: current };
+    });
+  };
+
+  const handleCreateType = async () => {
+    if (!newTypeName.trim()) return;
+    try {
+      const res = await fetch('/api/product-variant-types', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newTypeName.trim(), display_order: axisTypes.length }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAxisTypes(prev => [...prev, { ...data.data, values: [] }]);
+        setSelectedTypeIds(prev => new Set(prev).add(data.data.id));
+        setNewTypeName('');
+      } else {
+        alert(`Erro ao criar atributo: ${data.error}`);
+      }
+    } catch (err) {
+      alert('Erro ao criar atributo');
+    }
+  };
+
+  const handleCreateValue = async (typeId) => {
+    const draft = newValueDrafts[typeId];
+    if (!draft?.value?.trim()) return;
+    try {
+      const res = await fetch('/api/product-variant-types?resource=values', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          variant_type_id: typeId,
+          value: draft.value.trim(),
+          swatch_hex: draft.swatch_hex || null,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAxisTypes(prev => prev.map(t =>
+          t.id === typeId ? { ...t, values: [...(t.values || []), data.data] } : t
+        ));
+        setSelectedValueIds(prev => ({
+          ...prev,
+          [typeId]: new Set(prev[typeId] || []).add(data.data.id),
+        }));
+        setNewValueDrafts(prev => ({ ...prev, [typeId]: { value: '', swatch_hex: '' } }));
+      } else {
+        alert(`Erro ao criar valor: ${data.error}`);
+      }
+    } catch (err) {
+      alert('Erro ao criar valor');
+    }
+  };
+
+  const handleGenerateMatrix = () => {
+    const axisValuePairs = axisTypes
+      .filter(t => selectedTypeIds.has(t.id))
+      .map(t => ({
+        typeName: t.name,
+        values: (t.values || [])
+          .filter(v => (selectedValueIds[t.id] || new Set()).has(v.id))
+          .map(v => v.value),
+      }))
+      .filter(axis => axis.values.length > 0);
+
+    if (axisValuePairs.length === 0) {
+      alert('Selecione ao menos um atributo com pelo menos um valor');
       return;
     }
 
-    try {
-      const url = '/api/product-variants';
-      const method = editingVariant ? 'PUT' : 'POST';
-      const body = editingVariant
-        ? { id: editingVariant.id, ...formData }
-        : { product_id: productId, ...formData };
+    const combos = cartesianProduct(axisValuePairs);
+    const existingKeys = new Set(rows.map(r => attributesKey(r.attributes)));
 
-      const response = await fetch(url, {
-        method,
+    const newRows = combos
+      .filter(combo => !existingKeys.has(attributesKey(combo)))
+      .map(combo => ({
+        _key: `draft-${attributesKey(combo)}-${Math.random().toString(36).slice(2, 8)}`,
+        id: null,
+        attributes: combo,
+        cost_price: '',
+        supplier_margin_percentage: '',
+        stock_quantity: 0,
+        low_stock_threshold: 10,
+        sku: `${(productSku || productName || 'SKU').toString().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10)}-${suggestSkuSuffix(combo)}`,
+        image_url: '',
+        is_default: false,
+        is_active: true,
+      }));
+
+    if (newRows.length === 0) {
+      alert('Todas as combinações selecionadas já existem na tabela abaixo.');
+      return;
+    }
+
+    setRows(prev => {
+      const merged = [...prev, ...newRows];
+      if (!merged.some(r => r.is_default) && merged.length > 0) {
+        merged[0] = { ...merged[0], is_default: true };
+      }
+      return merged;
+    });
+  };
+
+  const updateRow = (key, field, value) => {
+    setRows(prev => prev.map(r => (r._key === key ? { ...r, [field]: value } : r)));
+  };
+
+  const setRowAsDefault = (key) => {
+    setRows(prev => prev.map(r => ({ ...r, is_default: r._key === key })));
+  };
+
+  const removeRow = async (row) => {
+    if (row.id) {
+      if (!confirm('Excluir este SKU definitivamente?')) return;
+      try {
+        const res = await fetch(`/api/product-variants?id=${row.id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!data.success) {
+          alert(`Erro ao excluir: ${data.error}`);
+          return;
+        }
+      } catch (err) {
+        alert('Erro ao excluir variante');
+        return;
+      }
+    }
+    setRows(prev => prev.filter(r => r._key !== row._key));
+  };
+
+  const applyBulkCost = () => {
+    if (!bulkCost) return;
+    setRows(prev => prev.map(r => ({ ...r, cost_price: bulkCost })));
+  };
+
+  const applyBulkStock = () => {
+    if (bulkStock === '') return;
+    setRows(prev => prev.map(r => ({ ...r, stock_quantity: bulkStock })));
+  };
+
+  const handleImageUpload = async (key, file) => {
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('folder', 'products');
+      const res = await fetch('/api/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.success) {
+        updateRow(key, 'image_url', data.url);
+      } else {
+        alert(data.error || 'Erro ao enviar imagem');
+      }
+    } catch (err) {
+      alert('Erro ao enviar imagem');
+    }
+  };
+
+  const handleSaveAll = async () => {
+    if (rows.length === 0) {
+      alert('Nenhum SKU para salvar. Gere combinações primeiro.');
+      return;
+    }
+    const missingCost = rows.filter(r => r.is_active && (r.cost_price === '' || r.cost_price === null));
+    if (missingCost.length > 0) {
+      alert(`Preencha o custo de todos os SKUs ativos (${missingCost.length} faltando).`);
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+    try {
+      const payload = {
+        product_id: productId,
+        variants: rows.map(r => ({
+          id: r.id,
+          sku: r.sku,
+          attributes: r.attributes,
+          cost_price: parseFloat(r.cost_price) || null,
+          supplier_margin_percentage: r.supplier_margin_percentage ? parseFloat(r.supplier_margin_percentage) : null,
+          stock_quantity: parseInt(r.stock_quantity) || 0,
+          low_stock_threshold: parseInt(r.low_stock_threshold) || 10,
+          image_url: r.image_url || null,
+          is_default: r.is_default,
+          is_active: r.is_active,
+        })),
+      };
+
+      const res = await fetch('/api/product-variants/bulk', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify(payload),
       });
-
-      const data = await response.json();
+      const data = await res.json();
 
       if (data.success) {
-        alert(`Variante ${editingVariant ? 'atualizada' : 'criada'} com sucesso!`);
-        resetForm();
+        alert(`${data.data.length} SKU(s) salvo(s) com sucesso!`);
         loadData();
       } else {
-        alert(`Erro: ${data.error}`);
+        setError(data.error || 'Erro ao salvar variantes');
       }
-    } catch (error) {
-      console.error('Error saving variant:', error);
-      alert('Erro ao salvar variante');
+    } catch (err) {
+      console.error('Error saving variants:', err);
+      setError('Erro ao salvar variantes');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleDelete = async (variantId) => {
-    if (!confirm('Tem certeza que deseja excluir esta variante?')) return;
-
-    try {
-      const response = await fetch(`/api/product-variants?id=${variantId}`, {
-        method: 'DELETE',
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        alert('Variante excluída com sucesso!');
-        loadData();
-      } else {
-        alert(`Erro: ${data.error}`);
-      }
-    } catch (error) {
-      console.error('Error deleting variant:', error);
-      alert('Erro ao excluir variante');
-    }
-  };
-
-  const handleEdit = (variant) => {
-    setEditingVariant(variant);
-    setFormData({
-      attributes: variant.attributes || {},
-      price_adjustment: variant.price_adjustment || 0,
-      price_adjustment_type: variant.price_adjustment_type || 'fixed',
-      stock_quantity: variant.stock_quantity || 0,
-      low_stock_threshold: variant.low_stock_threshold || 10,
-      sku: variant.sku || '',
-      image_url: variant.image_url || '',
-      weight: variant.weight || '',
-      height: variant.height || '',
-      width: variant.width || '',
-      depth: variant.depth || '',
-      is_active: variant.is_active !== false,
-    });
-    setShowForm(true);
-  };
-
-  const resetForm = () => {
-    setFormData({
-      attributes: {},
-      price_adjustment: 0,
-      price_adjustment_type: 'fixed',
-      stock_quantity: 0,
-      low_stock_threshold: 10,
-      sku: '',
-      image_url: '',
-      weight: '',
-      height: '',
-      width: '',
-      depth: '',
-      is_active: true,
-    });
-    setEditingVariant(null);
-    setShowForm(false);
-  };
-
-  const handleAttributeChange = (typeName, value) => {
-    setFormData(prev => ({
-      ...prev,
-      attributes: {
-        ...prev.attributes,
-        [typeName]: value,
-      },
-    }));
-  };
-
-  const removeAttribute = (typeName) => {
-    const newAttributes = { ...formData.attributes };
-    delete newAttributes[typeName];
-    setFormData(prev => ({
-      ...prev,
-      attributes: newAttributes,
-    }));
-  };
+  const axisOrder = useMemo(() => {
+    const set = new Set();
+    rows.forEach(r => Object.keys(r.attributes).forEach(k => set.add(k)));
+    return Array.from(set);
+  }, [rows]);
 
   if (loading) {
-    return <div className="p-4 flex items-center justify-center h-32"><div className="text-center"><Loader size="md" className="mx-auto mb-2" /><p className="text-gray-600 text-sm">Carregando variantes...</p></div></div>;
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg shadow-xl p-8"><Loader size="md" className="mx-auto mb-2" /><p className="text-gray-600 text-sm">Carregando variantes...</p></div>
+      </div>
+    );
   }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
-          <h2 className="text-2xl font-bold">Gerenciar Variantes do Produto</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
-          >
-            ×
-          </button>
+        <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
+          <div>
+            <h2 className="text-2xl font-bold">Gerenciar Variantes (SKUs)</h2>
+            <p className="text-sm text-gray-500 mt-0.5">{productName}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl font-bold">×</button>
         </div>
 
-        <div className="p-6">
-          {!showForm ? (
-            <>
-              <div className="mb-4 flex justify-between items-center">
-                <h3 className="text-lg font-semibold">
-                  Variantes Cadastradas ({variants.length})
-                </h3>
-                <button
-                  onClick={() => setShowForm(true)}
-                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                >
-                  + Nova Variante
-                </button>
-              </div>
-
-              {variants.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <p>Nenhuma variante cadastrada.</p>
-                  <p className="text-sm mt-2">Clique em "Nova Variante" para começar.</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Atributos
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          SKU
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Ajuste de Preço
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Estoque
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Status
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Ações
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {variants.map((variant) => (
-                        <tr key={variant.id}>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex flex-wrap gap-1">
-                              {Object.entries(variant.attributes || {}).map(([key, value]) => (
-                                <span
-                                  key={key}
-                                  className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                                >
-                                  {key}: {value}
-                                </span>
-                              ))}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {variant.sku || '-'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {variant.price_adjustment_type === 'percentage'
-                              ? `${variant.price_adjustment}%`
-                              : `R$ ${variant.price_adjustment.toFixed(2)}`}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {variant.stock_quantity}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span
-                              className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                variant.is_active
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-red-100 text-red-800'
-                              }`}
-                            >
-                              {variant.is_active ? 'Ativo' : 'Inativo'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button
-                              onClick={() => handleEdit(variant)}
-                              className="text-blue-600 hover:text-blue-900 mr-3"
-                            >
-                              Editar
-                            </button>
-                            <button
-                              onClick={() => handleDelete(variant.id)}
-                              className="text-red-600 hover:text-red-900"
-                            >
-                              Excluir
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">
-                  {editingVariant ? 'Editar Variante' : 'Nova Variante'}
-                </h3>
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="text-gray-600 hover:text-gray-800"
-                >
-                  Cancelar
-                </button>
-              </div>
-
-              {/* Atributos da Variante */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-semibold mb-3">Atributos da Variante</h4>
-                <div className="space-y-3">
-                  {variantTypes.map((type) => (
-                    <div key={type.id} className="flex items-center gap-2">
-                      <label className="w-32 text-sm font-medium">{type.name}:</label>
-                      <input
-                        type="text"
-                        value={formData.attributes[type.name] || ''}
-                        onChange={(e) => handleAttributeChange(type.name, e.target.value)}
-                        className="flex-1 px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
-                        placeholder={`Ex: ${type.name === 'Tamanho' ? 'M, G, GG' : type.name === 'Cor' ? 'Azul, Vermelho' : 'Algodão, Poliéster'}`}
-                      />
-                      {formData.attributes[type.name] && (
-                        <button
-                          type="button"
-                          onClick={() => removeAttribute(type.name)}
-                          className="text-red-600 hover:text-red-800 px-2"
-                        >
-                          ×
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Informações de Preço */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Ajuste de Preço</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={formData.price_adjustment}
-                    onChange={(e) =>
-                      setFormData({ ...formData, price_adjustment: parseFloat(e.target.value) })
-                    }
-                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Tipo de Ajuste</label>
-                  <select
-                    value={formData.price_adjustment_type}
-                    onChange={(e) =>
-                      setFormData({ ...formData, price_adjustment_type: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="fixed">Valor Fixo (R$)</option>
-                    <option value="percentage">Percentual (%)</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Estoque */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Quantidade em Estoque</label>
-                  <input
-                    type="number"
-                    value={formData.stock_quantity}
-                    onChange={(e) =>
-                      setFormData({ ...formData, stock_quantity: parseInt(e.target.value) })
-                    }
-                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Limite de Estoque Baixo</label>
-                  <input
-                    type="number"
-                    value={formData.low_stock_threshold}
-                    onChange={(e) =>
-                      setFormData({ ...formData, low_stock_threshold: parseInt(e.target.value) })
-                    }
-                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              {/* SKU e Imagem */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">SKU (opcional)</label>
-                  <input
-                    type="text"
-                    value={formData.sku}
-                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
-                    placeholder="Deixe em branco para gerar automaticamente"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">URL da Imagem (opcional)</label>
-                  <input
-                    type="text"
-                    value={formData.image_url}
-                    onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              {/* Dimensões */}
-              <div className="grid grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Peso (g)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={formData.weight}
-                    onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Altura (cm)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={formData.height}
-                    onChange={(e) => setFormData({ ...formData, height: e.target.value })}
-                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Largura (cm)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={formData.width}
-                    onChange={(e) => setFormData({ ...formData, width: e.target.value })}
-                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Profundidade (cm)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={formData.depth}
-                    onChange={(e) => setFormData({ ...formData, depth: e.target.value })}
-                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              {/* Status */}
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="is_active"
-                  checked={formData.is_active}
-                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="is_active" className="ml-2 block text-sm text-gray-900">
-                  Variante Ativa
-                </label>
-              </div>
-
-              {/* Botões */}
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                >
-                  {editingVariant ? 'Atualizar' : 'Criar'} Variante
-                </button>
-              </div>
-            </form>
+        <div className="p-6 space-y-6">
+          {error && (
+            <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded">{error}</div>
           )}
+
+          {/* Passo 1: escolher eixos */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="font-semibold mb-1">1. Quais atributos esse produto varia?</h3>
+            <p className="text-xs text-gray-500 mb-3">Ex: Versão, Cor, Armazenamento — cada um vira um seletor na página do produto.</p>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {axisTypes.map(type => (
+                <button
+                  key={type.id}
+                  type="button"
+                  onClick={() => toggleType(type.id)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border-2 transition-colors ${
+                    selectedTypeIds.has(type.id)
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                  }`}
+                >
+                  {type.name}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2 items-center">
+              <input
+                type="text"
+                value={newTypeName}
+                onChange={(e) => setNewTypeName(e.target.value)}
+                placeholder="+ Novo atributo (ex: Material)"
+                className="flex-1 max-w-xs px-3 py-1.5 text-sm border rounded focus:ring-2 focus:ring-blue-500"
+              />
+              <button type="button" onClick={handleCreateType} className="px-3 py-1.5 text-sm bg-gray-700 text-white rounded hover:bg-gray-800">
+                Adicionar
+              </button>
+            </div>
+          </div>
+
+          {/* Passo 2: escolher valores de cada eixo selecionado */}
+          {axisTypes.filter(t => selectedTypeIds.has(t.id)).map(type => (
+            <div key={type.id} className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-semibold mb-3">Valores de "{type.name}"</h3>
+              <div className="flex flex-wrap gap-2 mb-3">
+                {(type.values || []).map(val => {
+                  const checked = (selectedValueIds[type.id] || new Set()).has(val.id);
+                  return (
+                    <button
+                      key={val.id}
+                      type="button"
+                      onClick={() => toggleValue(type.id, val.id)}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium border-2 transition-colors ${
+                        checked ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                      }`}
+                    >
+                      {val.swatch_hex && (
+                        <span className="w-4 h-4 rounded-full border border-gray-300" style={{ backgroundColor: val.swatch_hex }} />
+                      )}
+                      {val.value}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex gap-2 items-center flex-wrap">
+                <input
+                  type="text"
+                  value={newValueDrafts[type.id]?.value || ''}
+                  onChange={(e) => setNewValueDrafts(prev => ({ ...prev, [type.id]: { ...prev[type.id], value: e.target.value } }))}
+                  placeholder={type.name.toLowerCase() === 'cor' ? '+ Nova cor (ex: Titânio Verde)' : `+ Novo valor de ${type.name}`}
+                  className="flex-1 max-w-xs px-3 py-1.5 text-sm border rounded focus:ring-2 focus:ring-blue-500"
+                />
+                {type.name.toLowerCase() === 'cor' && (
+                  <input
+                    type="color"
+                    value={newValueDrafts[type.id]?.swatch_hex || '#888888'}
+                    onChange={(e) => setNewValueDrafts(prev => ({ ...prev, [type.id]: { ...prev[type.id], swatch_hex: e.target.value } }))}
+                    className="w-9 h-9 border rounded cursor-pointer"
+                    title="Cor do swatch"
+                  />
+                )}
+                <button type="button" onClick={() => handleCreateValue(type.id)} className="px-3 py-1.5 text-sm bg-gray-700 text-white rounded hover:bg-gray-800">
+                  Adicionar
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {/* Passo 3: gerar matriz */}
+          {selectedTypeIds.size > 0 && (
+            <button
+              type="button"
+              onClick={handleGenerateMatrix}
+              className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700"
+            >
+              ⚙️ Gerar combinações (SKUs)
+            </button>
+          )}
+
+          {/* Passo 4: tabela de SKUs */}
+          {rows.length > 0 && (
+            <div>
+              <div className="flex flex-wrap items-end justify-between gap-3 mb-3">
+                <h3 className="font-semibold">SKUs ({rows.length})</h3>
+                <div className="flex gap-2 items-end flex-wrap">
+                  <div>
+                    <label className="block text-xs text-gray-500">Aplicar custo a todos</label>
+                    <div className="flex gap-1">
+                      <input type="number" step="0.01" value={bulkCost} onChange={(e) => setBulkCost(e.target.value)} className="w-24 px-2 py-1 text-sm border rounded" placeholder="R$" />
+                      <button type="button" onClick={applyBulkCost} className="px-2 py-1 text-xs bg-gray-200 rounded hover:bg-gray-300">Aplicar</button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500">Aplicar estoque a todos</label>
+                    <div className="flex gap-1">
+                      <input type="number" value={bulkStock} onChange={(e) => setBulkStock(e.target.value)} className="w-20 px-2 py-1 text-sm border rounded" placeholder="Qtd" />
+                      <button type="button" onClick={applyBulkStock} className="px-2 py-1 text-xs bg-gray-200 rounded hover:bg-gray-300">Aplicar</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto border rounded-lg">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      {axisOrder.map(name => (
+                        <th key={name} className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{name}</th>
+                      ))}
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">SKU</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Custo (R$)</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Margem (%)</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Estoque</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Foto</th>
+                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Padrão</th>
+                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Ativo</th>
+                      <th className="px-3 py-2"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {rows.map(row => (
+                      <tr key={row._key} className={!row.is_active ? 'opacity-50' : ''}>
+                        {axisOrder.map(name => (
+                          <td key={name} className="px-3 py-2 whitespace-nowrap font-medium text-gray-700">{row.attributes[name] || '-'}</td>
+                        ))}
+                        <td className="px-3 py-2">
+                          <input type="text" value={row.sku} onChange={(e) => updateRow(row._key, 'sku', e.target.value)} className="w-32 px-2 py-1 border rounded text-xs font-mono" />
+                        </td>
+                        <td className="px-3 py-2">
+                          <input type="number" step="0.01" min="0" value={row.cost_price} onChange={(e) => updateRow(row._key, 'cost_price', e.target.value)} className="w-24 px-2 py-1 border rounded" placeholder="obrigatório" />
+                        </td>
+                        <td className="px-3 py-2">
+                          <input type="number" step="0.01" min="0" max="100" value={row.supplier_margin_percentage} onChange={(e) => updateRow(row._key, 'supplier_margin_percentage', e.target.value)} className="w-20 px-2 py-1 border rounded" placeholder={defaultMargin ? `${defaultMargin} (padrão)` : 'padrão'} />
+                        </td>
+                        <td className="px-3 py-2">
+                          <input type="number" min="0" value={row.stock_quantity} onChange={(e) => updateRow(row._key, 'stock_quantity', e.target.value)} className="w-20 px-2 py-1 border rounded" />
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-1">
+                            {row.image_url && <img src={row.image_url} alt="" className="w-8 h-8 rounded object-cover border" />}
+                            <label className="text-xs text-blue-600 hover:underline cursor-pointer">
+                              {row.image_url ? 'Trocar' : 'Upload'}
+                              <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleImageUpload(row._key, e.target.files[0])} />
+                            </label>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <input type="radio" name="default_variant" checked={row.is_default} onChange={() => setRowAsDefault(row._key)} />
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <input type="checkbox" checked={row.is_active} onChange={(e) => updateRow(row._key, 'is_active', e.target.checked)} />
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          <button type="button" onClick={() => removeRow(row)} className="text-red-600 hover:text-red-800 text-xs font-medium">Excluir</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <button type="button" onClick={onClose} className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50">
+              Fechar
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveAll}
+              disabled={saving || rows.length === 0}
+              className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 font-semibold"
+            >
+              {saving ? 'Salvando...' : `💾 Salvar ${rows.length} SKU(s)`}
+            </button>
+          </div>
         </div>
       </div>
     </div>

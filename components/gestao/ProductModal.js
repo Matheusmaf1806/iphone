@@ -43,6 +43,7 @@ export default function ProductModal({ product, onClose, onSave }) {
     depth: product?.depth || '',
     is_active: product?.is_active !== false,
     is_featured: product?.is_featured || false,
+    has_variants: product?.has_variants || false,
   });
 
   const [productImages, setProductImages] = useState(getInitialImages);
@@ -228,12 +229,15 @@ export default function ProductModal({ product, onClose, onSave }) {
         description: formData.description || null,
         category: formData.category || null,
         image_url: mainImageUrl,
-        price: salePrice, // Calculado automaticamente
-        cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
+        price: formData.has_variants ? null : salePrice, // p/ produtos com variantes, calculado ao salvar os SKUs
+        cost_price: formData.has_variants ? null : (formData.cost_price ? parseFloat(formData.cost_price) : null),
         supplier_margin_percentage: parseFloat(formData.supplier_margin_percentage),
         sku: formData.sku || null,
-        stock_type: formData.stock_type,
-        stock_quantity: formData.stock_type === 'unlimited' ? -1 : parseInt(formData.stock_quantity),
+        has_variants: formData.has_variants,
+        stock_type: formData.has_variants ? 'limited' : formData.stock_type,
+        stock_quantity: formData.has_variants
+          ? (product?.stock_quantity || 0)
+          : (formData.stock_type === 'unlimited' ? -1 : parseInt(formData.stock_quantity)),
         low_stock_threshold: formData.stock_type === 'unlimited' ? 0 : parseInt(formData.low_stock_threshold),
         weight: formData.weight ? parseFloat(formData.weight) : null,
         height: formData.height ? parseFloat(formData.height) : null,
@@ -652,6 +656,26 @@ export default function ProductModal({ product, onClose, onSave }) {
                 </div>
               </div>
 
+              {/* Variações */}
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-5">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.has_variants}
+                    onChange={(e) => setFormData(prev => ({ ...prev, has_variants: e.target.checked }))}
+                    className="w-5 h-5 mt-0.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span>
+                    <span className="text-sm font-semibold text-gray-900">Este produto tem variações (versão, cor, armazenamento...)</span>
+                    <p className="text-xs text-gray-600 mt-0.5">
+                      Ative para vender o mesmo produto em várias combinações — ex: iPhone 17 Pro em Pro/Pro Max,
+                      várias cores e capacidades — cada uma com seu próprio preço, custo e estoque (SKU).
+                      Depois de salvar o produto, use "🔧 Gerenciar Variantes" para montar as combinações.
+                    </p>
+                  </span>
+                </label>
+              </div>
+
               {/* Precificação */}
               <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg p-5">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -659,25 +683,40 @@ export default function ProductModal({ product, onClose, onSave }) {
                   Precificação e Margens
                 </h3>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Preço de Custo (R$) <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      name="cost_price"
-                      value={formData.cost_price}
-                      onChange={handleChange}
-                      required
-                      step="0.01"
-                      min="0"
-                      placeholder="35.00"
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                    />
-                    <p className="text-xs text-gray-600 mt-1">Custo base do produto</p>
+                {formData.has_variants ? (
+                  <div className="mb-4 p-4 bg-white rounded-lg border-2 border-green-300 text-sm text-gray-700">
+                    <i className="fas fa-info-circle text-green-600 mr-2"></i>
+                    Custo e preço deste produto são calculados automaticamente a partir do SKU mais barato
+                    cadastrado em "Gerenciar Variantes".
+                    {product?.cost_price ? (
+                      <span className="block mt-1 text-gray-600">
+                        Custo atual (menor SKU): <strong>R$ {parseFloat(product.cost_price).toFixed(2)}</strong>
+                      </span>
+                    ) : null}
                   </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Preço de Custo (R$) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        name="cost_price"
+                        value={formData.cost_price}
+                        onChange={handleChange}
+                        required
+                        step="0.01"
+                        min="0"
+                        placeholder="35.00"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                      />
+                      <p className="text-xs text-gray-600 mt-1">Custo base do produto</p>
+                    </div>
+                  </div>
+                )}
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Margem (%) <span className="text-red-500">*</span>
@@ -694,7 +733,11 @@ export default function ProductModal({ product, onClose, onSave }) {
                       placeholder="10.00"
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                     />
-                    <p className="text-xs text-gray-600 mt-1">Margem de lucro do fornecedor</p>
+                    <p className="text-xs text-gray-600 mt-1">
+                      {formData.has_variants
+                        ? 'Margem padrão dos SKUs — cada variante pode sobrescrever em "Gerenciar Variantes"'
+                        : 'Margem de lucro do fornecedor'}
+                    </p>
                   </div>
                 </div>
 
@@ -818,6 +861,14 @@ export default function ProductModal({ product, onClose, onSave }) {
                   Estoque
                 </h3>
 
+                {formData.has_variants ? (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-700">
+                    <i className="fas fa-info-circle mr-2"></i>
+                    Estoque é controlado por SKU em "Gerenciar Variantes". O total aparece aqui automaticamente
+                    (soma de todos os SKUs ativos{product?.stock_quantity != null ? `: ${product.stock_quantity} un.` : ''}).
+                  </div>
+                ) : (
+                <>
                 {/* Stock type toggle */}
                 <div className="flex gap-3 mb-4">
                   <button
@@ -885,6 +936,8 @@ export default function ProductModal({ product, onClose, onSave }) {
                       <p className="text-xs text-gray-500 mt-1">Você será alertado quando atingir esse limite</p>
                     </div>
                   </div>
+                )}
+                </>
                 )}
               </div>
 
@@ -972,6 +1025,9 @@ export default function ProductModal({ product, onClose, onSave }) {
       {showVariantsManager && product?.id && (
         <ProductVariantsManager
           productId={product.id}
+          productName={formData.name}
+          productSku={formData.sku}
+          defaultMargin={formData.supplier_margin_percentage}
           onClose={() => setShowVariantsManager(false)}
         />
       )}
