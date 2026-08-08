@@ -3,6 +3,7 @@ import Footer from '../components/Footer';
 import HeroBanner from '../components/HeroBanner';
 import FeaturesBar from '../components/FeaturesBar';
 import CategoriesSection from '../components/CategoriesSection';
+import AppleUniverseCarousel from '../components/AppleUniverseCarousel';
 import FeaturedProducts from '../components/FeaturedProducts';
 import PromoSection from '../components/PromoSection';
 import PromoBanner from '../components/PromoBanner';
@@ -10,6 +11,8 @@ import TestimonialsSection from '../components/TestimonialsSection';
 import { getCurrentContext } from '../lib/affiliateTracking';
 import { createServerClient } from '../lib/supabase/server';
 import { calculateAllPrices } from '../lib/pricing';
+
+const CAROUSEL_CATEGORIES = ['iphone', 'mac', 'apple-watch', 'airpods', 'acessorios'];
 
 export default async function Home() {
   // Detectar afiliado pelo domínio
@@ -101,6 +104,55 @@ export default async function Home() {
     console.error('[Home] Supabase client is null - env vars not configured');
   }
 
+  // Preço "a partir de" (mais barato ativo) por categoria, pro carrossel
+  const startingPrices = {};
+  if (supabase) {
+    try {
+      const affiliateMargin = parseFloat(affiliate?.commission_percentage) || config.defaultAffiliateMargin;
+
+      const results = await Promise.all(
+        CAROUSEL_CATEGORIES.map((slug) =>
+          supabase
+            .from('products')
+            .select('cost_price, supplier_margin_percentage, price')
+            .eq('category', slug)
+            .eq('is_active', true)
+            .order('price', { ascending: true })
+            .limit(1)
+            .maybeSingle()
+        )
+      );
+
+      CAROUSEL_CATEGORIES.forEach((slug, i) => {
+        const cheapest = results[i]?.data;
+        if (!cheapest) {
+          startingPrices[slug] = null;
+          return;
+        }
+
+        const costPrice = parseFloat(cheapest.cost_price) || 0;
+        if (costPrice > 0) {
+          try {
+            const prices = calculateAllPrices({
+              costPrice,
+              supplierMarginPercentage: parseFloat(cheapest.supplier_margin_percentage) || 10,
+              affiliateMarginPercentage: affiliateMargin,
+              cardFeePercentage: config.cardFeePercentage,
+            });
+            startingPrices[slug] = prices.pixPrice;
+            return;
+          } catch (err) {
+            console.error('[Home] Carousel price calc error for category:', slug, err);
+          }
+        }
+
+        startingPrices[slug] = parseFloat(cheapest.price) || null;
+      });
+    } catch (err) {
+      console.error('[Home] Error fetching carousel starting prices:', err);
+    }
+  }
+
   return (
     <>
       <Header />
@@ -109,6 +161,7 @@ export default async function Home() {
         <HeroBanner />
         <FeaturesBar />
         <CategoriesSection />
+        <AppleUniverseCarousel startingPrices={startingPrices} />
 
         {productsWithPrices.length > 0 && (
           <FeaturedProducts products={productsWithPrices} />

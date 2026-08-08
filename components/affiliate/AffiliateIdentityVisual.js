@@ -14,6 +14,8 @@ export default function AffiliateIdentityVisual({ session }) {
   const [buttonColor, setButtonColor] = useState('#0043f7');
   const [buttonTextColor, setButtonTextColor] = useState('#0c0e0b');
   const [buttonHover, setButtonHover] = useState('#0036c6');
+  const [instagramHandle, setInstagramHandle] = useState('');
+  const [whatsappNumber, setWhatsappNumber] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState(null);
@@ -45,6 +47,8 @@ export default function AffiliateIdentityVisual({ session }) {
         setButtonColor(result.data.buttonColor || '#0043f7');
         setButtonTextColor(result.data.buttonTextColor || '#0c0e0b');
         setButtonHover(result.data.buttonHover || '#0036c6');
+        setInstagramHandle(result.data.instagramHandle || '');
+        setWhatsappNumber(result.data.whatsappNumber || '');
       } else {
         throw new Error(result.error || 'Resposta inválida da API');
       }
@@ -73,6 +77,8 @@ export default function AffiliateIdentityVisual({ session }) {
           buttonColor,
           buttonTextColor,
           buttonHover,
+          instagramHandle,
+          whatsappNumber,
         }),
       });
 
@@ -100,6 +106,8 @@ export default function AffiliateIdentityVisual({ session }) {
       setButtonColor('#0043f7');
       setButtonTextColor('#0c0e0b');
       setButtonHover('#0036c6');
+      setInstagramHandle('');
+      setWhatsappNumber('');
       setMessage({ type: 'info', text: 'Configurações resetadas. Clique em "Salvar" para aplicar.' });
     }
   };
@@ -273,6 +281,55 @@ export default function AffiliateIdentityVisual({ session }) {
                 {!faviconUrl && ` Sem favicon personalizado, será usado o ícone padrão ${SITE_NAME}.`}
               </p>
             </div>
+          </div>
+
+          {/* Contato público */}
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-orange-400 rounded-xl flex items-center justify-center">
+                <i className="fab fa-instagram text-white"></i>
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Contato Público</h2>
+                <p className="text-sm text-gray-600">Aparece nos banners e destaques da sua loja</p>
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Instagram
+                </label>
+                <div className="flex items-center border-2 border-gray-300 rounded-lg overflow-hidden focus-within:border-brand-yellow">
+                  <span className="px-3 text-gray-500 bg-gray-50 h-full flex items-center border-r border-gray-300">@</span>
+                  <input
+                    type="text"
+                    value={instagramHandle}
+                    onChange={(e) => setInstagramHandle(e.target.value.replace(/^@/, ''))}
+                    placeholder="minhaloja"
+                    className="flex-1 px-3 py-2.5 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  WhatsApp (com DDI e DDD)
+                </label>
+                <input
+                  type="text"
+                  value={whatsappNumber}
+                  onChange={(e) => setWhatsappNumber(e.target.value)}
+                  placeholder="5511999999999"
+                  className="w-full px-3 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-brand-yellow"
+                />
+              </div>
+            </div>
+
+            <p className="mt-3 text-xs text-gray-500">
+              <i className="fas fa-info-circle mr-1"></i>
+              Sem esses dados, os botões de Instagram e "Fale com um especialista" não aparecem na loja.
+            </p>
           </div>
 
           {/* Cores */}
