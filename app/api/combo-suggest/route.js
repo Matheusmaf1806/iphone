@@ -63,10 +63,13 @@ export async function POST(request) {
     const installmentFees = await getInstallmentFees();
     const cardFeePercentage = getFeeForInstallments(installmentFees, maxInstallments);
 
-    // Produtos são marcados com a categoria de duas formas diferentes no banco
-    // (category_slug em uns, category com o nome de exibição em outros — mesma
-    // inconsistência que /categoria/[slug]/page.js já trata) — por isso tenta
-    // primeiro por category_slug e, se não achar nada, cai pra category por nome.
+    // Produtos são marcados com a categoria de três formas diferentes no banco,
+    // a depender de quando/como foram cadastrados: category_slug preenchido
+    // ('apple-watch'), category com o slug direto ('apple-watch') ou category
+    // com o nome de exibição ('Apple Watch'). Uma única query com OR cobre os
+    // três formatos de uma vez — sequencial ("tenta A, senão B") tem o risco de
+    // achar 1 produto num formato e nunca olhar os outros, perdendo produtos que
+    // usam o outro formato.
     const PRODUCT_COLUMNS = `
       id, slug, name, image_url, price, cost_price, cost_currency, import_tax_percentage,
       supplier_margin_percentage, is_featured, rating,
@@ -74,25 +77,16 @@ export async function POST(request) {
     `;
 
     const fetchCategoryRows = async (categorySlug) => {
-      const { data: bySlug, error: slugError } = await supabase
+      const label = CATEGORY_LABELS[categorySlug] || categorySlug;
+      const { data, error } = await supabase
         .from('products')
         .select(PRODUCT_COLUMNS)
-        .eq('category_slug', categorySlug)
         .eq('is_active', true)
+        .or(`category_slug.eq."${categorySlug}",category.ilike."${categorySlug}",category.ilike."${label}"`)
         .limit(200);
 
-      if (slugError) console.error('[combo-suggest] category_slug query error:', categorySlug, slugError);
-      if (bySlug && bySlug.length > 0) return bySlug;
-
-      const { data: byName, error: nameError } = await supabase
-        .from('products')
-        .select(PRODUCT_COLUMNS)
-        .ilike('category', CATEGORY_LABELS[categorySlug] || categorySlug)
-        .eq('is_active', true)
-        .limit(200);
-
-      if (nameError) console.error('[combo-suggest] category name query error:', categorySlug, nameError);
-      return byName || [];
+      if (error) console.error('[combo-suggest] category query error:', categorySlug, error);
+      return data || [];
     };
 
     const results = await Promise.all(categories.map(fetchCategoryRows));
