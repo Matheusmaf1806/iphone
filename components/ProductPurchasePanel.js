@@ -5,27 +5,24 @@ import ProductGallery from './ProductGallery';
 import ProductInfo from './ProductInfo';
 import ProductActions from './ProductActions';
 
-// Liga a galeria de fotos ao seletor de variante: quando o SKU escolhido tem foto
-// própria (product_variants.image_url), ela vira a imagem principal, com o resto da
-// galeria do produto disponível nas miniaturas. Sem isso, o cliente escolhe "Titânio
-// Azul" e continua vendo a mesma foto genérica do produto.
+// Liga a galeria de fotos ao seletor de variante: quando o SKU escolhido tem fotos
+// próprias (product_variants.image_urls, até 4), a galeria mostra só elas. Sem isso,
+// o cliente escolhe "Titânio Azul" e continua vendo a mesma foto genérica do produto.
 export default function ProductPurchasePanel({ product }) {
   const [activeVariant, setActiveVariant] = useState(null);
 
   const galleryImages = useMemo(() => {
-    if (!activeVariant?.imageUrl) return product.images;
+    const variantImages = activeVariant?.imageUrls?.length > 0 ? activeVariant.imageUrls : null;
+    if (!variantImages) return product.images;
 
-    const rest = (product.images || []).filter(img => img.src !== activeVariant.imageUrl);
-    return [
-      {
-        id: `variant-${activeVariant.id}`,
-        src: activeVariant.imageUrl,
-        alt: `${product.name} — ${Object.values(activeVariant.attributes || {}).join(', ')}`,
-        position: -1,
-        isPrimary: true,
-      },
-      ...rest,
-    ];
+    const label = Object.values(activeVariant.attributes || {}).join(', ');
+    return variantImages.map((src, index) => ({
+      id: `variant-${activeVariant.id}-${index}`,
+      src,
+      alt: `${product.name} — ${label}`,
+      position: index,
+      isPrimary: index === 0,
+    }));
   }, [activeVariant, product.images, product.name]);
 
   return (

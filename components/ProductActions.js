@@ -77,6 +77,10 @@ export default function ProductActions({ product, onVariantChange }) {
     hasVariants
       ? {
           ...product,
+          // O nome já sai com a combinação escolhida (ex: "iPhone 17 Pro Max — Titânio
+          // Azul, 256GB") — assim carrinho, checkout e pedido nunca mostram só o nome
+          // genérico do produto sem dizer qual SKU foi comprado.
+          name: `${product.name} — ${Object.values(selectedVariant.attributes).join(', ')}`,
           price: selectedVariant.pixPrice,
           pixPrice: selectedVariant.pixPrice,
           cardPrice: selectedVariant.cardPrice,
@@ -298,15 +302,11 @@ export default function ProductActions({ product, onVariantChange }) {
             <span>Você escolhe a data prevista da sua viagem no checkout.</span>
           </li>
           <li className="flex items-start gap-2.5">
-            <i className="fas fa-passport text-gray-400 mt-0.5"></i>
-            <span>Leve passaporte e passagem aérea no momento da retirada.</span>
-          </li>
-          <li className="flex items-start gap-2.5">
             <i className="fas fa-hand-holding text-gray-400 mt-0.5"></i>
             <span>Retirada pessoal em Orlando — não há entrega no Brasil.</span>
           </li>
           <li className="flex items-start gap-2.5">
-            <i className="fas fa-shield-alt text-gray-400 mt-0.5"></i>
+            <i className="fas fa-shield-halved text-gray-400 mt-0.5"></i>
             <span>Aparelho original Apple com garantia internacional.</span>
           </li>
         </ul>

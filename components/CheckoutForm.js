@@ -1210,11 +1210,6 @@ export default function CheckoutForm({ config }) {
                     />
                     <div className="flex-1">
                       <h4 className="text-sm font-semibold text-gray-900">{item.name}</h4>
-                      {item.attributes && Object.keys(item.attributes).length > 0 && (
-                        <p className="text-[11px] text-gray-500">
-                          {Object.entries(item.attributes).map(([k, v]) => `${k}: ${v}`).join(' · ')}
-                        </p>
-                      )}
                       <p className="text-xs text-gray-600">Qtd: {item.quantity}</p>
                       <p className="text-sm font-bold " style={{ color: affiliate.buttonColor || '#0043f7' }}>
                         R$ {itemTotal.toFixed(2).replace('.', ',')}
@@ -1406,11 +1401,6 @@ export default function CheckoutForm({ config }) {
                     />
                     <div className="flex-1 min-w-0">
                       <h4 className="text-sm font-semibold text-gray-900 truncate">{item.name}</h4>
-                      {item.attributes && Object.keys(item.attributes).length > 0 && (
-                        <p className="text-[11px] text-gray-500 truncate">
-                          {Object.entries(item.attributes).map(([k, v]) => `${k}: ${v}`).join(' · ')}
-                        </p>
-                      )}
                       <p className="text-xs text-gray-500">Qtd: {item.quantity}</p>
                     </div>
                   </div>

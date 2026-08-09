@@ -40,28 +40,36 @@ export default function ProductGallery({ images = [] }) {
     <>
       <div className="w-full lg:sticky top-28 self-start fade-in-section">
         <div
-          className="main-image-container bg-gray-100 border border-gray-200 shadow-sm"
+          className="main-image-container relative aspect-square bg-gradient-to-b from-gray-50 to-gray-100 border border-gray-200 rounded-2xl shadow-sm flex items-center justify-center p-8 md:p-12"
           onClick={openLightbox}
         >
           <img
             src={displayImages[currentIndex]?.src}
             alt={displayImages[currentIndex]?.alt || 'Produto'}
-            className="main-image"
+            className="main-image max-w-full max-h-full w-auto h-auto object-contain"
           />
+          <span className="absolute bottom-4 right-4 w-9 h-9 rounded-full bg-white/90 shadow-md flex items-center justify-center text-gray-500">
+            <i className="fas fa-magnifying-glass-plus text-sm"></i>
+          </span>
         </div>
         {displayImages.length > 1 && (
           <div className="thumbnail-container mt-4">
-            <div className="thumbnail-wrapper flex gap-2 justify-start overflow-x-auto">
+            <div className="thumbnail-wrapper flex gap-3 justify-start overflow-x-auto">
               {displayImages.map((image, index) => (
-                <img
+                <button
                   key={index}
-                  src={image.src}
-                  alt={image.alt}
-                  className={`thumbnail w-16 h-16 md:w-20 md:h-20 object-cover flex-shrink-0 ${
-                    currentIndex === index ? 'active' : ''
-                  }`}
+                  type="button"
                   onClick={() => setMainImage(index)}
-                />
+                  className={`thumbnail flex-shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-xl bg-gray-50 border-2 flex items-center justify-center p-2 ${
+                    currentIndex === index ? 'active' : 'border-gray-200'
+                  }`}
+                >
+                  <img
+                    src={image.src}
+                    alt={image.alt}
+                    className="max-w-full max-h-full object-contain"
+                  />
+                </button>
               ))}
             </div>
           </div>
