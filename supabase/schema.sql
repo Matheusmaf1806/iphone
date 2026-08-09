@@ -587,6 +587,26 @@ insert into platform_config (key, value, description) values
 on conflict (key) do nothing;
 
 -- =====================================================================
+-- 18.1 installment_fees — taxa do cartão por número de parcelas (1 a 21x)
+-- Usada onde o número de parcelas já é conhecido (ex: assistente de compra da
+-- home). O resto do site continua usando o card_fee_percentage único acima.
+-- Valores abaixo são fictícios (ver supabase/migrations/add_installment_fees.sql).
+-- =====================================================================
+
+create table if not exists installment_fees (
+  installments integer primary key check (installments between 1 and 21),
+  fee_percentage numeric(5,2) not null default 0
+);
+
+insert into installment_fees (installments, fee_percentage) values
+  (1, 9.68), (2, 10.50), (3, 11.30), (4, 12.10), (5, 12.90),
+  (6, 13.70), (7, 14.60), (8, 15.50), (9, 16.40), (10, 17.30),
+  (11, 18.20), (12, 19.10), (13, 20.00), (14, 20.90), (15, 21.80),
+  (16, 22.70), (17, 23.60), (18, 24.50), (19, 25.40), (20, 26.30),
+  (21, 27.20)
+on conflict (installments) do nothing;
+
+-- =====================================================================
 -- SEED — dados mínimos para o site funcionar no primeiro acesso
 -- =====================================================================
 
@@ -677,7 +697,7 @@ begin
     'product_variants', 'product_variant_values', 'stock_movements',
     'affiliate_product_commissions', 'orders', 'order_items', 'payments',
     'coupons', 'coupon_usage', 'affiliate_sales', 'affiliate_withdrawals',
-    'platform_config'
+    'platform_config', 'installment_fees'
   ]
   loop
     execute format('alter table %I enable row level security', t);

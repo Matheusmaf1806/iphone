@@ -3,6 +3,7 @@ import { createServerClient } from '../../../lib/supabase/server';
 import { getCurrentContext } from '../../../lib/affiliateTracking';
 import { calculateAllPrices, resolveCostPriceBRL } from '../../../lib/pricing';
 import { buildComboSuggestion } from '../../../lib/comboSuggest';
+import { getInstallmentFees, getFeeForInstallments } from '../../../lib/installmentFees';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,6 +56,13 @@ export async function POST(request) {
     const { affiliate, config } = await getCurrentContext();
     const affiliateMargin = parseFloat(affiliate?.commission_percentage) || config.defaultAffiliateMargin;
 
+    // A taxa do cartão varia por número de parcelas (installment_fees) — como o
+    // cliente já disse quantas parcelas no máximo ele quer, usamos a taxa exata
+    // dessa contagem em vez da taxa única (card_fee_percentage) usada no resto do
+    // site, onde o número de parcelas ainda não é conhecido nesse ponto do fluxo.
+    const installmentFees = await getInstallmentFees();
+    const cardFeePercentage = getFeeForInstallments(installmentFees, maxInstallments);
+
     const results = await Promise.all(
       categories.map((slug) =>
         supabase
@@ -85,7 +93,7 @@ export async function POST(request) {
               costPrice: costPriceBRL,
               supplierMarginPercentage: parseFloat(p.supplier_margin_percentage) || 10,
               affiliateMarginPercentage: affiliateMargin,
-              cardFeePercentage: config.cardFeePercentage,
+              cardFeePercentage,
             });
 
             return {
@@ -134,6 +142,7 @@ export async function POST(request) {
         totalPix: combo.totalPix,
         installmentsUsed: combo.installmentsUsed,
         installmentValue: combo.installmentValue,
+        cardFeePercentage,
         budget: combo.budget,
         leftover: combo.leftover,
         items: combo.items.map((item) => ({
