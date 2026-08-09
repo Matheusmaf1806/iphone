@@ -3,6 +3,7 @@ import { SITE_NAME } from '../../../../../lib/siteConfig';
 import { createServerClient } from '../../../../../lib/supabase/server';
 import { getPlatformConfig } from '../../../../../lib/affiliateTracking';
 import { priceCartItems } from '../../../../../lib/orderPricing';
+import { getInstallmentFees, getFeeForInstallments } from '../../../../../lib/installmentFees';
 
 const getPayPalBaseUrl = () =>
   process.env.PAYPAL_ENVIRONMENT === 'production'
@@ -40,7 +41,7 @@ async function getPayPalAccessToken() {
 
 export async function POST(request) {
   try {
-    const { items, affiliateId, coupon } = await request.json();
+    const { items, affiliateId, coupon, installments } = await request.json();
 
     if (!items || items.length === 0) {
       return NextResponse.json(
@@ -75,7 +76,14 @@ export async function POST(request) {
       affiliate = affiliateData;
     }
 
-    const priced = await priceCartItems({ supabase, items, affiliate, config, isPix: false });
+    // A taxa do cartão varia por número de parcelas (installment_fees) — usa a taxa
+    // exata do número de parcelas escolhido no checkout em vez da taxa fixa de
+    // platform_config, senão o valor autorizado aqui não bate com o que o checkout
+    // mostrou pro cliente.
+    const installmentFees = await getInstallmentFees();
+    const cardFeePercentage = getFeeForInstallments(installmentFees, parseInt(installments, 10) || 1);
+
+    const priced = await priceCartItems({ supabase, items, affiliate, config, isPix: false, cardFeePercentageOverride: cardFeePercentage });
     if (priced.error) {
       return NextResponse.json({ success: false, error: priced.error }, { status: 400 });
     }

@@ -403,6 +403,7 @@ create table if not exists orders (
   shipping_cost numeric(10,2),
 
   payment_method text not null,          -- pix | credit-card | paypal
+  installments integer not null default 1, -- nº de parcelas escolhido (taxa vem de installment_fees)
   subtotal numeric(10,2) not null,
   coupon_discount numeric(10,2) not null default 0,
   pix_discount numeric(10,2) not null default 0,
