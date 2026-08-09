@@ -207,7 +207,7 @@ export default function AffiliateSettings({ session }) {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex-1 px-4 py-3 rounded-xl font-medium transition-all whitespace-nowrap ${
                   activeTab === tab.id
-                    ? 'bg-brand-yellow text-gray-900 shadow-md'
+                    ? 'bg-brand-yellow text-white shadow-md'
                     : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
@@ -326,7 +326,7 @@ export default function AffiliateSettings({ session }) {
               <button
                 type="submit"
                 disabled={saving}
-                className="w-full bg-gradient-to-r from-brand-yellow to-yellow-400 text-gray-900 font-bold py-4 rounded-xl hover:shadow-lg transition-all disabled:opacity-50"
+                className="w-full bg-gradient-to-r from-brand-yellow to-yellow-400 text-white font-bold py-4 rounded-xl hover:shadow-lg transition-all disabled:opacity-50"
               >
                 {saving ? (
                   <>
@@ -444,7 +444,7 @@ export default function AffiliateSettings({ session }) {
               <button
                 type="submit"
                 disabled={saving}
-                className="w-full bg-gradient-to-r from-brand-yellow to-yellow-400 text-gray-900 font-bold py-4 rounded-xl hover:shadow-lg transition-all disabled:opacity-50"
+                className="w-full bg-gradient-to-r from-brand-yellow to-yellow-400 text-white font-bold py-4 rounded-xl hover:shadow-lg transition-all disabled:opacity-50"
               >
                 {saving ? (
                   <>
@@ -516,7 +516,7 @@ export default function AffiliateSettings({ session }) {
               <button
                 type="submit"
                 disabled={saving}
-                className="w-full bg-gradient-to-r from-brand-yellow to-yellow-400 text-gray-900 font-bold py-4 rounded-xl hover:shadow-lg transition-all disabled:opacity-50"
+                className="w-full bg-gradient-to-r from-brand-yellow to-yellow-400 text-white font-bold py-4 rounded-xl hover:shadow-lg transition-all disabled:opacity-50"
               >
                 {saving ? (
                   <>

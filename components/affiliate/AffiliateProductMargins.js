@@ -321,7 +321,7 @@ export default function AffiliateProductMargins({ session }) {
             <button
               onClick={handleSaveDefaultMargin}
               disabled={savingDefault}
-              className="w-full bg-gradient-to-r from-brand-yellow to-yellow-400 text-gray-900 font-bold py-3 rounded-xl hover:shadow-lg transition-all disabled:opacity-50"
+              className="w-full bg-gradient-to-r from-brand-yellow to-yellow-400 text-white font-bold py-3 rounded-xl hover:shadow-lg transition-all disabled:opacity-50"
             >
               {savingDefault ? (
                 <>
@@ -440,7 +440,7 @@ export default function AffiliateProductMargins({ session }) {
                         <div className="flex items-center justify-center gap-2">
                           <button
                             onClick={() => handleEditMargin(product)}
-                            className="px-3 py-1.5 bg-brand-yellow text-gray-900 rounded-lg text-sm font-medium hover:bg-yellow-400 transition-all"
+                            className="px-3 py-1.5 bg-brand-yellow text-white rounded-lg text-sm font-medium hover:bg-yellow-400 transition-all"
                             title="Editar margem"
                           >
                             <i className="fas fa-edit"></i>
@@ -543,7 +543,7 @@ export default function AffiliateProductMargins({ session }) {
                 <button
                   onClick={handleSaveMargin}
                   disabled={saving}
-                  className="flex-1 px-4 py-3 bg-brand-yellow text-gray-900 rounded-lg font-bold hover:bg-yellow-400 transition-all shadow-md hover:shadow-lg disabled:opacity-50"
+                  className="flex-1 px-4 py-3 bg-brand-yellow text-white rounded-lg font-bold hover:bg-yellow-400 transition-all shadow-md hover:shadow-lg disabled:opacity-50"
                 >
                   {saving ? (
                     <>

@@ -427,7 +427,7 @@ export default function AffiliateIdentityVisual({ session }) {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex-1 px-8 py-3 bg-brand-yellow text-gray-900 rounded-lg font-bold hover:bg-yellow-400 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-8 py-3 bg-brand-yellow text-white rounded-lg font-bold hover:bg-yellow-400 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? (
                 <>

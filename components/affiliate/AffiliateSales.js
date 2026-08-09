@@ -121,7 +121,7 @@ export default function AffiliateSales({ session }) {
                 onClick={() => setStatusFilter(status)}
                 className={`px-4 py-2 rounded-xl font-medium transition-all ${
                   statusFilter === status
-                    ? 'bg-brand-yellow text-gray-900 shadow-md'
+                    ? 'bg-brand-yellow text-white shadow-md'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
