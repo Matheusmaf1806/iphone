@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAffiliate } from '../contexts/AffiliateContext';
 import { useCart } from '../contexts/CartContext';
 import { formatCurrency } from '../lib/pricing';
@@ -124,6 +124,26 @@ export default function ShoppingAssistant() {
   const stepNumber = { categories: 1, budget: 2, installments: 3 }[step] || null;
   const sliderProgress = ((maxInstallments - MIN_INSTALLMENTS) / (MAX_INSTALLMENTS - MIN_INSTALLMENTS)) * 100;
 
+  const wrapRef = useRef(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          io.unobserve(el);
+        }
+      },
+      { threshold: 0.2 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   const toggleCategory = (slug) => {
     setSelectedCategories((prev) =>
       prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]
@@ -206,7 +226,7 @@ export default function ShoppingAssistant() {
   return (
     <section className="assist-section">
       <div className="container mx-auto px-4">
-        <div className="assist-wrap">
+        <div className={`assist-wrap ${isVisible ? 'in-view' : ''}`} ref={wrapRef}>
           <div className="assist-intro">
             <div className="assist-badge">
               <SparkleIcon size={11} />
@@ -357,8 +377,8 @@ export default function ShoppingAssistant() {
             {step === 'result' && combo && (
               <div className="assist-result">
                 <div className="assist-result-items">
-                  {combo.items.map((item) => (
-                    <a key={item.id} href={`/produto/${item.slug}`} className="assist-result-item">
+                  {combo.items.map((item, index) => (
+                    <a key={item.id} href={`/produto/${item.slug}`} className="assist-result-item" style={{ '--i': index }}>
                       <div className="assist-result-img">
                         {item.image_url ? (
                           <img src={item.image_url} alt={item.name} loading="lazy" />
@@ -428,6 +448,13 @@ export default function ShoppingAssistant() {
         .assist-wrap {
           max-width: 960px;
           margin: 0 auto;
+          opacity: 0;
+          transform: translateY(24px);
+          transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .assist-wrap.in-view {
+          opacity: 1;
+          transform: translateY(0);
         }
         @media (min-width: 900px) {
           .assist-wrap {
@@ -435,6 +462,36 @@ export default function ShoppingAssistant() {
             grid-template-columns: 0.85fr 1.15fr;
             gap: 40px;
             align-items: center;
+          }
+        }
+
+        @keyframes assistStepIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .assist-step,
+        .assist-loading,
+        .assist-result {
+          animation: assistStepIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .assist-wrap,
+          .assist-step,
+          .assist-loading,
+          .assist-result,
+          .assist-result-item,
+          .assist-loading-orb {
+            animation: none !important;
+            transition: none !important;
+            opacity: 1 !important;
+            transform: none !important;
           }
         }
 
@@ -558,6 +615,9 @@ export default function ShoppingAssistant() {
           border-color: #c7c7cc;
           box-shadow: 0 8px 18px -14px rgba(0, 0, 0, 0.3);
         }
+        .assist-chip:active {
+          transform: scale(0.96);
+        }
         .assist-chip.active {
           border-color: ${brand};
           background: color-mix(in srgb, ${brand} 6%, white);
@@ -622,6 +682,9 @@ export default function ShoppingAssistant() {
         }
         .assist-budget-chip:hover {
           border-color: #c7c7cc;
+        }
+        .assist-budget-chip:active {
+          transform: scale(0.95);
         }
         .assist-budget-chip.active {
           border-color: ${brand};
@@ -829,6 +892,8 @@ export default function ShoppingAssistant() {
           text-decoration: none;
           color: #0c0e0b;
           transition: transform 0.2s ease, box-shadow 0.2s ease;
+          animation: assistStepIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+          animation-delay: calc(var(--i, 0) * 70ms);
         }
         .assist-result-item:hover {
           transform: translateY(-2px);
