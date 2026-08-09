@@ -5,7 +5,7 @@ import { useCustomer } from '../contexts/CustomerContext';
 import { useRouter } from 'next/navigation';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { calculateAllPrices } from '../lib/pricing';
+import { calculateAllPrices, resolveCostPriceBRL } from '../lib/pricing';
 import { SITE_NAME } from '../lib/siteConfig';
 
 export default function CheckoutForm({ config }) {
@@ -107,7 +107,21 @@ export default function CheckoutForm({ config }) {
     return cartItems.map(item => {
       // If item has cost_price, recalculate with proper margins
       if (item.costPrice || item.cost_price) {
-        const costPrice = item.costPrice || item.cost_price;
+        const rawCostPrice = item.costPrice || item.cost_price;
+        // Custo pode estar cadastrado em dólar (SKU ou produto simples) — precisa
+        // passar pela mesma conversão de câmbio + imposto de importação usada na
+        // página do produto antes de entrar na cascata de margens, senão o resumo
+        // do checkout (e o valor cobrado no cartão/PayPal) fica muito menor que o
+        // preço real exibido na página do produto.
+        const costCurrency = item.costCurrency || item.cost_currency || 'BRL';
+        const importTaxPercentage = item.importTaxPercentage ?? item.import_tax_percentage ?? null;
+        const costPrice = resolveCostPriceBRL({
+          costPrice: rawCostPrice,
+          costCurrency,
+          importTaxPercentage,
+          usdBrlRate: config.usdBrlRate,
+          defaultImportTaxPercentage: config.defaultImportTaxPercentage,
+        });
         const supplierMargin = item.supplierMarginPercentage || item.supplier_margin_percentage || 10;
         const affiliateMargin = (itemMarginOverrides[item.lineId] !== undefined)
           ? itemMarginOverrides[item.lineId]
@@ -1370,7 +1384,16 @@ export default function CheckoutForm({ config }) {
               const rawInput = modalMarginInputs[item.lineId] ?? String(affiliate?.commission_percentage || config.defaultAffiliateMargin);
               const marginVal = parseFloat(rawInput);
               const valid = !isNaN(marginVal) && marginVal >= 0 && marginVal < 100;
-              const costPrice = item.costPrice || item.cost_price;
+              const rawCostPrice = item.costPrice || item.cost_price;
+              const costPrice = rawCostPrice
+                ? resolveCostPriceBRL({
+                    costPrice: rawCostPrice,
+                    costCurrency: item.costCurrency || item.cost_currency || 'BRL',
+                    importTaxPercentage: item.importTaxPercentage ?? item.import_tax_percentage ?? null,
+                    usdBrlRate: config.usdBrlRate,
+                    defaultImportTaxPercentage: config.defaultImportTaxPercentage,
+                  })
+                : rawCostPrice;
               const supplierMargin = item.supplierMarginPercentage || item.supplier_margin_percentage || 10;
 
               let previewPix = 0, previewCard = 0, commissionUnit = 0;

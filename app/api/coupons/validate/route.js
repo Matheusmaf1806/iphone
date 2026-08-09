@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { validateCoupon, applyCouponDiscount } from '../../../../lib/coupons';
-import { calculateAllPrices } from '../../../../lib/pricing';
+import { calculateAllPrices, resolveCostPriceBRL } from '../../../../lib/pricing';
+import { getPlatformConfig } from '../../../../lib/affiliateTracking';
 import { supabase } from '../../../../lib/supabase/client';
 
 // POST - Validar e calcular desconto do cupom
@@ -23,6 +24,8 @@ export async function POST(request) {
       );
     }
 
+    const config = await getPlatformConfig();
+
     // Calcular total do pedido antes do desconto
     let subtotal = 0;
     const itemsWithPrices = [];
@@ -31,7 +34,7 @@ export async function POST(request) {
       // Buscar produto
       const { data: product } = await supabase
         .from('products')
-        .select('id, name, cost_price, supplier_margin_percentage, stock_quantity')
+        .select('id, name, cost_price, cost_currency, import_tax_percentage, supplier_margin_percentage, stock_quantity')
         .eq('id', item.product_id)
         .single();
 
@@ -43,7 +46,7 @@ export async function POST(request) {
       }
 
       // Buscar margem customizada do afiliado se houver
-      let affiliateMargin = 0;
+      let affiliateMargin = config.defaultAffiliateMargin;
       if (affiliate_id) {
         const { data: affiliate } = await supabase
           .from('affiliates')
@@ -51,7 +54,7 @@ export async function POST(request) {
           .eq('id', affiliate_id)
           .single();
 
-        affiliateMargin = affiliate?.commission_rate || 0;
+        affiliateMargin = affiliate?.commission_rate || config.defaultAffiliateMargin;
 
         // Verificar se há margem customizada para este produto
         const { data: customCommission } = await supabase
@@ -66,12 +69,24 @@ export async function POST(request) {
         }
       }
 
+      // Custo pode estar cadastrado em dólar — converte pra BRL + imposto de
+      // importação antes de entrar na cascata de margens, mesma lógica usada em
+      // toda a vitrine e no checkout.
+      const costPriceBRL = resolveCostPriceBRL({
+        costPrice: parseFloat(product.cost_price || 0),
+        costCurrency: product.cost_currency,
+        importTaxPercentage: product.import_tax_percentage,
+        usdBrlRate: config.usdBrlRate,
+        defaultImportTaxPercentage: config.defaultImportTaxPercentage,
+      });
+
       // Calcular preços
-      const prices = calculateAllPrices(
-        product.cost_price,
-        product.supplier_margin_percentage,
-        affiliateMargin
-      );
+      const prices = calculateAllPrices({
+        costPrice: costPriceBRL,
+        supplierMarginPercentage: product.supplier_margin_percentage,
+        affiliateMarginPercentage: affiliateMargin,
+        cardFeePercentage: config.cardFeePercentage,
+      });
 
       const itemTotal = prices.pixPrice * item.quantity;
       subtotal += itemTotal;
@@ -107,7 +122,8 @@ export async function POST(request) {
         coupon,
         item.prices,
         item.supplier_margin,
-        item.affiliate_margin
+        item.affiliate_margin,
+        config.cardFeePercentage
       );
 
       const itemDiscount = (item.unit_price - discountResult.discountedPrices.pixPrice) * item.quantity;
