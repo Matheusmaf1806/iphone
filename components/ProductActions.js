@@ -4,27 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '../contexts/CartContext';
 import { useAffiliate } from '../contexts/AffiliateContext';
-
-// Agrupa os atributos de todas as variantes em eixos (ex: Versão, Cor, Armazenamento),
-// na ordem em que aparecem, para desenhar um seletor por eixo.
-function buildAxisOptions(variants) {
-  const order = [];
-  const values = {};
-  variants.forEach(v => {
-    Object.entries(v.attributes || {}).forEach(([key, value]) => {
-      if (!values[key]) {
-        values[key] = [];
-        order.push(key);
-      }
-      if (!values[key].includes(value)) values[key].push(value);
-    });
-  });
-  return order.map(name => ({ name, values: values[name] }));
-}
-
-function findMatchingVariant(variants, selected) {
-  return variants.find(v => Object.entries(selected).every(([key, value]) => v.attributes[key] === value)) || null;
-}
+import { buildAxisOptions, findMatchingVariant } from '../lib/variantSelection';
 
 export default function ProductActions({ product, onVariantChange }) {
   const [quantity, setQuantity] = useState(1);
