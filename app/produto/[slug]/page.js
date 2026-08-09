@@ -97,7 +97,7 @@ export default async function ProductPage({ params }) {
   // Buscar produtos relacionados e cross-sell em paralelo
   const [relatedRaw, crossSellRaw] = await Promise.all([
     getRelatedProducts(product.id, product.category, 10),
-    getCrossSellProducts(product.id, product.category, 1),
+    getCrossSellProducts(product.id, product.category, 2),
   ]);
 
   // Aplicar precificação do afiliado
@@ -133,7 +133,7 @@ export default async function ProductPage({ params }) {
         {crossSellProducts.length > 0 && (
           <ComboSuggestion
             currentProduct={productWithPrices}
-            suggestedProduct={crossSellProducts[0]}
+            suggestedProducts={crossSellProducts}
           />
         )}
 
