@@ -9,7 +9,7 @@ export default function ProductInfo({ product, children }) {
 
   const handleShare = async (platform) => {
     const url = window.location.href;
-    const text = `Confira ${product.name} - R$ ${product.price.toFixed(2).replace('.', ',')}`;
+    const text = `Confira ${product.name} - R$ ${(product.price || 0).toFixed(2).replace('.', ',')}`;
 
     const shareUrls = {
       whatsapp: `https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`,
