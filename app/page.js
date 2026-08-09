@@ -6,7 +6,6 @@ import FeaturesBar from '../components/FeaturesBar';
 import CategoriesSection from '../components/CategoriesSection';
 import AppleUniverseCarousel from '../components/AppleUniverseCarousel';
 import FeaturedProducts from '../components/FeaturedProducts';
-import PromoSection from '../components/PromoSection';
 import PromoBanner from '../components/PromoBanner';
 import TestimonialsSection from '../components/TestimonialsSection';
 import { getCurrentContext } from '../lib/affiliateTracking';
@@ -15,6 +14,89 @@ import { calculateAllPrices, resolveCostPriceBRL } from '../lib/pricing';
 import { computeVariantRollup } from '../lib/products';
 
 const CAROUSEL_CATEGORIES = ['iphone', 'mac', 'apple-watch', 'airpods', 'acessorios'];
+
+const CATEGORY_LABELS = {
+  iphone: 'iPhone',
+  'apple-watch': 'Apple Watch',
+  airpods: 'AirPods',
+};
+
+// Calcula preço (PIX/cartão) de uma lista de produtos crus vindos do banco — SKU mais
+// barato quando o produto tem variação, senão o custo direto do produto. Reaproveitada
+// pelas 3 seções de destaque (iPhone / Apple Watch / AirPods) pra não triplicar a
+// mesma lógica de precificação.
+function priceProducts(products, affiliate, config) {
+  return (products || []).map(product => {
+    try {
+      const rawCostPrice = parseFloat(product.cost_price) || 0;
+      const supplierMargin = parseFloat(product.supplier_margin_percentage) || 10;
+      const affiliateMargin = parseFloat(affiliate?.commission_percentage) || config.defaultAffiliateMargin;
+
+      // Produto com variação: custo/preço vêm do SKU mais barato (já sai resolvido
+      // pra BRL) — não confia em products.cost_price sozinho, que só fica certo
+      // depois que alguém salva em "Gerenciar Variantes".
+      const hasVariants = !!(product.has_variants || (product.variants || []).some(v => v.is_active !== false));
+      const rollup = hasVariants ? computeVariantRollup(product.variants, product.supplier_margin_percentage, config) : null;
+      const costPriceBRL = rollup?.costPrice != null
+        ? rollup.costPrice
+        : (rawCostPrice > 0 ? resolveCostPriceBRL({
+            costPrice: rawCostPrice,
+            costCurrency: product.cost_currency,
+            importTaxPercentage: product.import_tax_percentage,
+            usdBrlRate: config.usdBrlRate,
+            defaultImportTaxPercentage: config.defaultImportTaxPercentage,
+          }) : null);
+
+      if (costPriceBRL != null) {
+        const prices = calculateAllPrices({
+          costPrice: costPriceBRL,
+          supplierMarginPercentage: supplierMargin,
+          affiliateMarginPercentage: affiliateMargin,
+          cardFeePercentage: config.cardFeePercentage,
+        });
+
+        return {
+          ...product,
+          pixPrice: prices.pixPrice,
+          cardPrice: prices.finalPrice,
+          displayPrice: prices.pixPrice,
+        };
+      }
+    } catch (err) {
+      console.error('[Home] Price calc error for product:', product.id, err);
+    }
+
+    // Fallback: use stored price
+    const fallbackPrice = parseFloat(product.price) || 0;
+    return {
+      ...product,
+      pixPrice: fallbackPrice,
+      cardPrice: fallbackPrice,
+      displayPrice: fallbackPrice,
+    };
+  });
+}
+
+// Produtos são marcados com a categoria de três formas diferentes no banco, a depender
+// de quando/como foram cadastrados (mesmo padrão já usado em combo-suggest e na página
+// de categoria) — uma única query com OR cobre os três formatos de uma vez.
+async function fetchCategoryProducts(supabase, categorySlug, limit) {
+  const label = CATEGORY_LABELS[categorySlug] || categorySlug;
+  const { data, error } = await supabase
+    .from('products')
+    .select('*, variants:product_variants(*)')
+    .eq('is_active', true)
+    .or(`category_slug.eq."${categorySlug}",category.ilike."${categorySlug}",category.ilike."${label}"`)
+    .order('is_featured', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('[Home] Error fetching category products:', categorySlug, error);
+    return [];
+  }
+  return data || [];
+}
 
 export default async function Home() {
   // Detectar afiliado pelo domínio
@@ -29,101 +111,29 @@ export default async function Home() {
     console.error('[Home] Error getting context:', err);
   }
 
-  // Buscar produtos do banco de dados
   const supabase = createServerClient();
-  let productsWithPrices = [];
+
+  let iphoneProducts = [];
+  let watchProducts = [];
+  let airpodsProducts = [];
+  const startingPrices = {};
 
   if (supabase) {
     try {
-      // Primeiro tenta buscar produtos em destaque
-      let { data: products, error: featuredError } = await supabase
-        .from('products')
-        .select('*, variants:product_variants(*)')
-        .eq('is_active', true)
-        .eq('is_featured', true)
-        .order('created_at', { ascending: false })
-        .limit(6);
+      const [iphoneRows, watchRows, airpodsRows] = await Promise.all([
+        fetchCategoryProducts(supabase, 'iphone', 12),
+        fetchCategoryProducts(supabase, 'apple-watch', 8),
+        fetchCategoryProducts(supabase, 'airpods', 8),
+      ]);
 
-      if (featuredError) {
-        console.error('[Home] Error fetching featured products:', featuredError);
-      }
-
-      // Se não houver produtos em destaque, busca todos os ativos
-      if (!products || products.length === 0) {
-        const { data: allProducts, error: allError } = await supabase
-          .from('products')
-          .select('*, variants:product_variants(*)')
-          .eq('is_active', true)
-          .order('created_at', { ascending: false })
-          .limit(6);
-
-        if (allError) {
-          console.error('[Home] Error fetching all products:', allError);
-        }
-        products = allProducts;
-      }
-
-      if (products && products.length > 0) {
-        productsWithPrices = products.map(product => {
-          try {
-            const rawCostPrice = parseFloat(product.cost_price) || 0;
-            const supplierMargin = parseFloat(product.supplier_margin_percentage) || 10;
-            const affiliateMargin = parseFloat(affiliate?.commission_percentage) || config.defaultAffiliateMargin;
-
-            // Produto com variação: custo/preço vêm do SKU mais barato (já sai resolvido
-            // pra BRL) — não confia em products.cost_price sozinho, que só fica certo
-            // depois que alguém salva em "Gerenciar Variantes".
-            const hasVariants = !!(product.has_variants || (product.variants || []).some(v => v.is_active !== false));
-            const rollup = hasVariants ? computeVariantRollup(product.variants, product.supplier_margin_percentage, config) : null;
-            const costPriceBRL = rollup?.costPrice != null
-              ? rollup.costPrice
-              : (rawCostPrice > 0 ? resolveCostPriceBRL({
-                  costPrice: rawCostPrice,
-                  costCurrency: product.cost_currency,
-                  importTaxPercentage: product.import_tax_percentage,
-                  usdBrlRate: config.usdBrlRate,
-                  defaultImportTaxPercentage: config.defaultImportTaxPercentage,
-                }) : null);
-
-            if (costPriceBRL != null) {
-              const prices = calculateAllPrices({
-                costPrice: costPriceBRL,
-                supplierMarginPercentage: supplierMargin,
-                affiliateMarginPercentage: affiliateMargin,
-                cardFeePercentage: config.cardFeePercentage,
-              });
-
-              return {
-                ...product,
-                pixPrice: prices.pixPrice,
-                cardPrice: prices.finalPrice,
-                displayPrice: prices.pixPrice,
-              };
-            }
-          } catch (err) {
-            console.error('[Home] Price calc error for product:', product.id, err);
-          }
-
-          // Fallback: use stored price
-          const fallbackPrice = parseFloat(product.price) || 0;
-          return {
-            ...product,
-            pixPrice: fallbackPrice,
-            cardPrice: fallbackPrice,
-            displayPrice: fallbackPrice,
-          };
-        });
-      }
+      iphoneProducts = priceProducts(iphoneRows, affiliate, config);
+      watchProducts = priceProducts(watchRows, affiliate, config);
+      airpodsProducts = priceProducts(airpodsRows, affiliate, config);
     } catch (err) {
-      console.error('[Home] Error fetching products:', err);
+      console.error('[Home] Error fetching featured products:', err);
     }
-  } else {
-    console.error('[Home] Supabase client is null - env vars not configured');
-  }
 
-  // Preço "a partir de" (mais barato ativo) por categoria, pro carrossel
-  const startingPrices = {};
-  if (supabase) {
+    // Preço "a partir de" (mais barato ativo) por categoria, pro carrossel
     try {
       const affiliateMargin = parseFloat(affiliate?.commission_percentage) || config.defaultAffiliateMargin;
 
@@ -168,6 +178,8 @@ export default async function Home() {
     } catch (err) {
       console.error('[Home] Error fetching carousel starting prices:', err);
     }
+  } else {
+    console.error('[Home] Supabase client is null - env vars not configured');
   }
 
   return (
@@ -176,23 +188,32 @@ export default async function Home() {
 
       <main>
         <HeroBanner />
-        <ShoppingAssistant />
         <FeaturesBar />
         <CategoriesSection />
         <AppleUniverseCarousel startingPrices={startingPrices} />
 
-        {productsWithPrices.length > 0 && (
-          <FeaturedProducts products={productsWithPrices} />
+        {iphoneProducts.length > 0 && (
+          <FeaturedProducts products={iphoneProducts} title="iPhone em Destaque" />
         )}
 
-        <PromoSection />
-
-        {productsWithPrices.length > 0 && (
-          <FeaturedProducts products={productsWithPrices} />
+        {(watchProducts.length > 0 || airpodsProducts.length > 0) && (
+          <section className="py-10 md:py-14 bg-gray-50">
+            <div className="container mx-auto px-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-10">
+                {watchProducts.length > 0 && (
+                  <FeaturedProducts products={watchProducts} title="Apple Watch" compact />
+                )}
+                {airpodsProducts.length > 0 && (
+                  <FeaturedProducts products={airpodsProducts} title="AirPods" compact />
+                )}
+              </div>
+            </div>
+          </section>
         )}
 
-        <PromoBanner />
+        <ShoppingAssistant />
         <TestimonialsSection />
+        <PromoBanner />
       </main>
 
       <Footer />
