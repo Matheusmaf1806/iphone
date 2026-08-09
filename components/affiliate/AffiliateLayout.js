@@ -141,7 +141,7 @@ export default function AffiliateLayout({ children, session }) {
                       onClick={() => setSidebarOpen(false)}
                       className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${
                         isActive
-                          ? 'bg-brand-yellow text-gray-900 shadow-md'
+                          ? 'bg-brand-yellow text-white shadow-md'
                           : 'text-gray-700 hover:bg-gray-100'
                       }`}
                     >

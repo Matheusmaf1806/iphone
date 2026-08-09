@@ -185,7 +185,7 @@ export default function AffiliateProducts({ session }) {
                   className={`w-full py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
                     copiedId === product.id
                       ? 'bg-green-500 text-white'
-                      : 'bg-gradient-to-r from-brand-yellow to-yellow-400 text-gray-900 hover:shadow-lg'
+                      : 'bg-gradient-to-r from-brand-yellow to-yellow-400 text-white hover:shadow-lg'
                   }`}
                 >
                   {copiedId === product.id ? (
