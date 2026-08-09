@@ -133,8 +133,17 @@ export async function POST(request) {
 
     if (userError) {
       console.error('Error creating affiliate user:', userError);
-      // Rollback: delete the affiliate
-      await supabase.from('affiliates').delete().eq('id', affiliate.id);
+      // Rollback: delete the affiliate — se o rollback também falhar, fica um
+      // afiliado "órfão" (sem nenhum usuário conseguindo logar nele) e a mensagem
+      // de erro precisa deixar isso bem claro, em vez de só reportar o erro
+      // original como se o rollback tivesse funcionado.
+      const { error: rollbackError } = await supabase.from('affiliates').delete().eq('id', affiliate.id);
+      if (rollbackError) {
+        console.error('Error rolling back affiliate after user creation failure:', rollbackError);
+        return NextResponse.json({
+          error: `Erro ao criar usuário (${userError.message}) e também falhou ao desfazer o afiliado criado — peça pra alguém apagar manualmente o afiliado "${affiliate.name}" (id ${affiliate.id}) e tente de novo.`,
+        }, { status: 500 });
+      }
       return NextResponse.json({ error: 'Erro ao criar usuário: ' + userError.message }, { status: 500 });
     }
 
