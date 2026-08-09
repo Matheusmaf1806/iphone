@@ -42,6 +42,11 @@ export default function GestaoLayout({ children, session }) {
       path: '/gestao/erp/usuarios',
     },
     {
+      icon: 'fa-file-zipper',
+      label: 'Importar Apple Watch',
+      path: '/gestao/erp/importar-watch',
+    },
+    {
       icon: 'fa-sliders-h',
       label: 'Configurações',
       path: '/gestao/erp/configuracoes',
