@@ -3,6 +3,7 @@ import { createServerClient } from '../../../../lib/supabase/server';
 import { calculateAllPrices, resolveCostPriceBRL } from '../../../../lib/pricing';
 import { getPlatformConfig } from '../../../../lib/affiliateTracking';
 import { registerCouponUsage } from '../../../../lib/coupons';
+import { getInstallmentFees, getFeeForInstallments } from '../../../../lib/installmentFees';
 import { updateStock, updateVariantStock } from '../../../../lib/products';
 
 export async function POST(request) {
@@ -48,6 +49,17 @@ export async function POST(request) {
         .single();
 
       affiliate = affiliateData;
+    }
+
+    // A taxa do cartão varia por número de parcelas (installment_fees) — reflete o
+    // custo real do gateway pra cada parcelamento, diferente da taxa única
+    // (platform_config.card_fee_percentage) usada só como fallback/pra PIX. PIX não
+    // paga taxa de cartão.
+    const isPix = payment.method === 'pix';
+    let cardFeePercentage = config.cardFeePercentage;
+    if (!isPix) {
+      const installmentFees = await getInstallmentFees();
+      cardFeePercentage = getFeeForInstallments(installmentFees, parseInt(payment.installments, 10) || 1);
     }
 
     // Calcular totais do pedido
@@ -150,10 +162,9 @@ export async function POST(request) {
         costPrice,
         supplierMarginPercentage,
         affiliateMarginPercentage: affiliateMargin,
-        cardFeePercentage: config.cardFeePercentage,
+        cardFeePercentage,
       });
 
-      const isPix = payment.method === 'pix';
       const unitPrice = isPix ? prices.pixPrice : prices.finalPrice;
       const itemTotal = unitPrice * item.quantity;
 
@@ -183,7 +194,7 @@ export async function POST(request) {
         import_tax_percentage_used: effectiveTaxPercentage || 0,
         supplier_margin_percentage: supplierMarginPercentage,
         affiliate_margin_percentage: affiliateMargin,
-        card_fee_percentage: isPix ? 0 : config.cardFeePercentage,
+        card_fee_percentage: isPix ? 0 : cardFeePercentage,
         net_price: prices.netPrice,
         pix_price: prices.pixPrice,
         final_price: prices.finalPrice,
@@ -216,6 +227,7 @@ export async function POST(request) {
         pickup_travel_notes: pickup.travelNotes || null,
         pickup_terms_accepted: pickup.termsAccepted,
         payment_method: payment.method,
+        installments: isPix ? 1 : (parseInt(payment.installments, 10) || 1),
         subtotal: orderSubtotal,
         coupon_discount: couponDiscount,
         pix_discount: pixDiscount,

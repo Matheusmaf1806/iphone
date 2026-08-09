@@ -12,6 +12,7 @@ import TestimonialsSection from '../components/TestimonialsSection';
 import { getCurrentContext } from '../lib/affiliateTracking';
 import { createServerClient } from '../lib/supabase/server';
 import { calculateAllPrices, resolveCostPriceBRL } from '../lib/pricing';
+import { computeVariantRollup } from '../lib/products';
 
 const CAROUSEL_CATEGORIES = ['iphone', 'mac', 'apple-watch', 'airpods', 'acessorios'];
 
@@ -37,7 +38,7 @@ export default async function Home() {
       // Primeiro tenta buscar produtos em destaque
       let { data: products, error: featuredError } = await supabase
         .from('products')
-        .select('*')
+        .select('*, variants:product_variants(*)')
         .eq('is_active', true)
         .eq('is_featured', true)
         .order('created_at', { ascending: false })
@@ -51,7 +52,7 @@ export default async function Home() {
       if (!products || products.length === 0) {
         const { data: allProducts, error: allError } = await supabase
           .from('products')
-          .select('*')
+          .select('*, variants:product_variants(*)')
           .eq('is_active', true)
           .order('created_at', { ascending: false })
           .limit(6);
@@ -65,18 +66,26 @@ export default async function Home() {
       if (products && products.length > 0) {
         productsWithPrices = products.map(product => {
           try {
-            const costPrice = parseFloat(product.cost_price) || 0;
+            const rawCostPrice = parseFloat(product.cost_price) || 0;
             const supplierMargin = parseFloat(product.supplier_margin_percentage) || 10;
             const affiliateMargin = parseFloat(affiliate?.commission_percentage) || config.defaultAffiliateMargin;
 
-            if (costPrice > 0) {
-              const costPriceBRL = resolveCostPriceBRL({
-                costPrice,
-                costCurrency: product.cost_currency,
-                importTaxPercentage: product.import_tax_percentage,
-                usdBrlRate: config.usdBrlRate,
-                defaultImportTaxPercentage: config.defaultImportTaxPercentage,
-              });
+            // Produto com variação: custo/preço vêm do SKU mais barato (já sai resolvido
+            // pra BRL) — não confia em products.cost_price sozinho, que só fica certo
+            // depois que alguém salva em "Gerenciar Variantes".
+            const hasVariants = !!(product.has_variants || (product.variants || []).some(v => v.is_active !== false));
+            const rollup = hasVariants ? computeVariantRollup(product.variants, product.supplier_margin_percentage, config) : null;
+            const costPriceBRL = rollup?.costPrice != null
+              ? rollup.costPrice
+              : (rawCostPrice > 0 ? resolveCostPriceBRL({
+                  costPrice: rawCostPrice,
+                  costCurrency: product.cost_currency,
+                  importTaxPercentage: product.import_tax_percentage,
+                  usdBrlRate: config.usdBrlRate,
+                  defaultImportTaxPercentage: config.defaultImportTaxPercentage,
+                }) : null);
+
+            if (costPriceBRL != null) {
               const prices = calculateAllPrices({
                 costPrice: costPriceBRL,
                 supplierMarginPercentage: supplierMargin,

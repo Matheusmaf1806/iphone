@@ -7,7 +7,20 @@ import { useRouter } from 'next/navigation';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { calculateAllPrices, resolveCostPriceBRL } from '../lib/pricing';
 
-export default function CheckoutForm({ config }) {
+// Cópia local da função pura de lib/installmentFees.js — não dá pra importar o módulo
+// original aqui porque ele também importa lib/supabase/server.js (next/headers), que
+// quebra em componente client. Mantém a mesma lógica: taxa exata se cadastrada, senão
+// a taxa cadastrada mais próxima abaixo.
+function getFeeForInstallments(feesMap, installments) {
+  if (feesMap[installments] != null) return feesMap[installments];
+  const known = Object.keys(feesMap).map(Number).sort((a, b) => a - b);
+  if (known.length === 0) return 0;
+  const lower = known.filter((n) => n <= installments).pop();
+  if (lower != null) return feesMap[lower];
+  return feesMap[known[0]];
+}
+
+export default function CheckoutForm({ config, installmentFees = {} }) {
   const affiliate = useAffiliate();
   const { cart, clearCart } = useCart();
   const { customer } = useCustomer();
@@ -46,6 +59,24 @@ export default function CheckoutForm({ config }) {
 
   // PIX / Asaas
   const [pixData, setPixData] = useState(null);
+
+  // Nº de parcelas escolhido pro pagamento no cartão — a taxa do cartão cresce por
+  // parcela (installment_fees, valores reais do gateway), diferente da taxa fixa
+  // única usada no resto do site.
+  const [installments, setInstallments] = useState(1);
+  const availableInstallments = useMemo(() => {
+    const known = Object.keys(installmentFees).map(Number).sort((a, b) => a - b);
+    return known.length > 0 ? known : [1];
+  }, [installmentFees]);
+  // Só usa o número de parcelas escolhido quando o método é "Cartão" (onde existe o
+  // seletor) — no botão "Pagar com PayPal" não há seleção de parcelas, então usa
+  // sempre a taxa de 1x (a mais baixa da tabela), pra bater com o que é
+  // efetivamente autorizado em /api/payments/paypal/create-order.
+  const effectiveInstallments = formData.paymentMethod === 'credit-card' ? installments : 1;
+  const cardFeePercentage = useMemo(
+    () => getFeeForInstallments(installmentFees, effectiveInstallments),
+    [installmentFees, effectiveInstallments]
+  );
 
   // Comissão do afiliado editável no checkout (por item)
   const [itemMarginOverrides, setItemMarginOverrides] = useState({});
@@ -132,7 +163,7 @@ export default function CheckoutForm({ config }) {
           costPrice,
           supplierMarginPercentage: supplierMargin,
           affiliateMarginPercentage: affiliateMargin,
-          cardFeePercentage: config.cardFeePercentage,
+          cardFeePercentage,
         });
 
         return {
@@ -153,7 +184,7 @@ export default function CheckoutForm({ config }) {
         ? itemMarginOverrides[item.lineId]
         : originalMargin;
       const newPixPrice = netPrice / (1 - affiliateMargin / 100);
-      const newCardPrice = newPixPrice / (1 - config.cardFeePercentage / 100);
+      const newCardPrice = newPixPrice / (1 - cardFeePercentage / 100);
       return {
         ...item,
         pixPrice: parseFloat(newPixPrice.toFixed(2)),
@@ -161,7 +192,7 @@ export default function CheckoutForm({ config }) {
         breakdown: { netPrice, pixPrice: newPixPrice },
       };
     });
-  }, [cartItems, affiliate, config, itemMarginOverrides]);
+  }, [cartItems, affiliate, config, itemMarginOverrides, cardFeePercentage]);
 
   // Calcular totais baseado no método de pagamento
   const pricing = useMemo(() => {
@@ -194,6 +225,24 @@ export default function CheckoutForm({ config }) {
       isPaypal,
     };
   }, [itemsWithPrices, formData.paymentMethod, config, appliedCoupon]);
+
+  // Total do cartão pra cada número de parcelas disponível, pra o cliente comparar
+  // antes de escolher — a taxa (e portanto o total) cresce por parcela, então não dá
+  // pra mostrar só o valor da parcela atual sem contexto do total de cada opção.
+  const installmentOptions = useMemo(() => {
+    const pixSubtotal = itemsWithPrices.reduce((sum, item) => sum + item.pixPrice * item.quantity, 0);
+    const afterCoupon = pixSubtotal - pricing.couponDiscount;
+    return availableInstallments.map((n) => {
+      const fee = getFeeForInstallments(installmentFees, n);
+      const total = fee < 100 ? afterCoupon / (1 - fee / 100) : afterCoupon;
+      return {
+        n,
+        fee,
+        total: parseFloat(total.toFixed(2)),
+        value: parseFloat((total / n).toFixed(2)),
+      };
+    });
+  }, [itemsWithPrices, pricing.couponDiscount, availableInstallments, installmentFees]);
 
   // Payload de itens enviado tanto pra criação da cobrança PayPal (create-order)
   // quanto pra criação do pedido (orders/create) — o mesmo formato nos dois casos
@@ -233,6 +282,7 @@ export default function CheckoutForm({ config }) {
               items: buildOrderItemsPayload(),
               affiliateId: affiliate?.affiliateId || affiliate?.id || null,
               coupon: appliedCoupon ? { discount_amount: appliedCoupon.discount_amount } : null,
+              installments: 1,
             }),
           });
           const data = await res.json();
@@ -259,6 +309,7 @@ export default function CheckoutForm({ config }) {
     items: buildOrderItemsPayload(),
     affiliateId: affiliate?.affiliateId || affiliate?.id || null,
     coupon: appliedCoupon ? { discount_amount: appliedCoupon.discount_amount } : null,
+    installments,
   };
 
   // Inicializar PayPal CardFields para cartão de crédito
@@ -503,6 +554,7 @@ export default function CheckoutForm({ config }) {
         payment: {
           method,
           paypalTransactionId: paypalTransactionId || null,
+          installments: method === 'credit-card' ? installments : 1,
         },
         items: buildOrderItemsPayload(),
         affiliateId: affiliate?.affiliateId || affiliate?.id || null,
@@ -946,6 +998,26 @@ export default function CheckoutForm({ config }) {
                 {/* Campos do Cartão via PayPal CardFields */}
                 {formData.paymentMethod === 'credit-card' && (
                   <div className="mt-6 space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Número de parcelas
+                      </label>
+                      <select
+                        value={installments}
+                        onChange={(e) => setInstallments(parseInt(e.target.value, 10))}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none transition-colors"
+                      >
+                        {installmentOptions.map((opt) => (
+                          <option key={opt.n} value={opt.n}>
+                            {opt.n}x de R$ {opt.value.toFixed(2).replace('.', ',')} — total R$ {opt.total.toFixed(2).replace('.', ',')}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        O valor total sobe conforme o número de parcelas — reflete o custo real do parcelamento sem juros pro cliente.
+                      </p>
+                    </div>
+
                     <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center gap-3">
                       <i className="fab fa-paypal text-xl text-blue-600"></i>
                       <p className="text-sm text-gray-700">
@@ -1420,7 +1492,7 @@ export default function CheckoutForm({ config }) {
               if (costPrice && valid) {
                 const netPrice = costPrice / (1 - supplierMargin / 100);
                 previewPix = netPrice / (1 - marginVal / 100);
-                previewCard = previewPix / (1 - config.cardFeePercentage / 100);
+                previewCard = previewPix / (1 - cardFeePercentage / 100);
                 commissionUnit = previewPix - netPrice;
               } else {
                 const originalMargin = (item.customMarkup !== undefined && item.customMarkup !== '')
@@ -1430,7 +1502,7 @@ export default function CheckoutForm({ config }) {
                 const netPrice = basePixPrice * (1 - originalMargin / 100);
                 const effectiveMargin = valid ? marginVal : originalMargin;
                 previewPix = netPrice / (1 - effectiveMargin / 100);
-                previewCard = previewPix / (1 - config.cardFeePercentage / 100);
+                previewCard = previewPix / (1 - cardFeePercentage / 100);
                 commissionUnit = previewPix - netPrice;
               }
 
