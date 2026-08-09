@@ -58,6 +58,37 @@ export default function ProductActions({ product, onVariantChange }) {
   const outOfStock = !!(selectedVariant && selectedVariant.stockQuantity <= 0);
   const canAddToCart = isVariantProduct ? !!(selectedVariant && !outOfStock) : true;
 
+  // Variantes ainda compatíveis com o que já foi escolhido (mesmo com a seleção
+  // incompleta) — usado pra mostrar "a partir de R$X" desde o primeiro momento em vez
+  // de esconder qualquer preço até a combinação inteira estar resolvida.
+  const reachableVariantsNow = useMemo(() => {
+    if (!hasSelectableVariants) return [];
+    return availableVariants.filter(v =>
+      Object.entries(selectedAttributes).every(([key, value]) => v.attributes[key] === value)
+    );
+  }, [hasSelectableVariants, availableVariants, selectedAttributes]);
+
+  const minReachablePrice = useMemo(() => {
+    const priced = reachableVariantsNow.filter(v => v.pixPrice != null);
+    return priced.length > 0 ? Math.min(...priced.map(v => v.pixPrice)) : null;
+  }, [reachableVariantsNow]);
+
+  // Estoque real do que está selecionado agora (SKU exato quando resolvido, ou o
+  // produto simples) — usado pra não deixar escolher mais unidades do que existe.
+  const maxQuantity = isVariantProduct
+    ? (selectedVariant ? selectedVariant.stockQuantity : null)
+    : (product.manageStock && product.stockQuantity != null && product.stockQuantity >= 0 ? product.stockQuantity : null);
+
+  // Se a variante muda (ou o estoque dela é menor que a quantidade já escolhida),
+  // a quantidade se ajusta sozinha em vez de deixar o cliente tentar comprar mais
+  // do que existe.
+  useEffect(() => {
+    if (maxQuantity != null && quantity > Math.max(maxQuantity, 1)) {
+      setQuantity(Math.max(maxQuantity, 1));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [maxQuantity]);
+
   // Avisa o componente pai (a galeria de fotos) qual variante está selecionada, pra
   // trocar a foto principal quando o SKU escolhido tiver imagem própria.
   useEffect(() => {
@@ -80,7 +111,7 @@ export default function ProductActions({ product, onVariantChange }) {
 
   const changeQuantity = (amount) => {
     const newValue = quantity + amount;
-    if (newValue >= 1) {
+    if (newValue >= 1 && (maxQuantity == null || newValue <= maxQuantity)) {
       setQuantity(newValue);
     }
   };
@@ -179,24 +210,41 @@ export default function ProductActions({ product, onVariantChange }) {
                     const matchingForValue = candidateVariants.filter(v => v.attributes[axis.name] === value);
                     const isSoldOut = matchingForValue.length > 0 && matchingForValue.every(v => v.stockQuantity <= 0);
 
+                    // Preço dessa opção específica, pra comparar antes de clicar — "a
+                    // partir de" quando ainda pode virar mais de um SKU, exato quando já
+                    // fecha em um só (ex: último eixo).
+                    const pricedForValue = matchingForValue.filter(v => v.pixPrice != null);
+                    const valueMinPrice = pricedForValue.length > 0 ? Math.min(...pricedForValue.map(v => v.pixPrice)) : null;
+                    const priceLabel = valueMinPrice == null ? null : (
+                      matchingForValue.length > 1
+                        ? `a partir de R$ ${valueMinPrice.toFixed(2).replace('.', ',')}`
+                        : `R$ ${valueMinPrice.toFixed(2).replace('.', ',')}`
+                    );
+
                     if (isColorAxis && swatchHex) {
                       return (
-                        <button
-                          key={value}
-                          type="button"
-                          onClick={() => selectAttribute(axisIndex, axis.name, value)}
-                          title={isSoldOut ? `${value} — esgotado` : value}
-                          className={`relative w-10 h-10 rounded-full flex-shrink-0 transition-all ${
-                            isSelected ? 'ring-2 ring-offset-2 ring-gray-900' : 'ring-1 ring-offset-1 ring-gray-300 hover:ring-gray-500'
-                          }`}
-                          style={{ backgroundColor: swatchHex }}
-                        >
-                          {isSoldOut && (
-                            <span className="absolute inset-0 flex items-center justify-center">
-                              <span className="w-full h-px bg-white rotate-45" />
+                        <div key={value} className="flex flex-col items-center gap-1 w-16">
+                          <button
+                            type="button"
+                            onClick={() => selectAttribute(axisIndex, axis.name, value)}
+                            title={isSoldOut ? `${value} — esgotado` : value}
+                            className={`relative w-10 h-10 rounded-full flex-shrink-0 transition-all ${
+                              isSelected ? 'ring-2 ring-offset-2 ring-gray-900' : 'ring-1 ring-offset-1 ring-gray-300 hover:ring-gray-500'
+                            }`}
+                            style={{ backgroundColor: swatchHex }}
+                          >
+                            {isSoldOut && (
+                              <span className="absolute inset-0 flex items-center justify-center">
+                                <span className="w-full h-px bg-white rotate-45" />
+                              </span>
+                            )}
+                          </button>
+                          {priceLabel && (
+                            <span className={`text-[10px] text-center leading-tight ${isSoldOut ? 'text-gray-400' : 'text-gray-500'}`}>
+                              {priceLabel}
                             </span>
                           )}
-                        </button>
+                        </div>
                       );
                     }
 
@@ -206,14 +254,18 @@ export default function ProductActions({ product, onVariantChange }) {
                         type="button"
                         onClick={() => selectAttribute(axisIndex, axis.name, value)}
                         title={isSoldOut ? `${value} — esgotado` : value}
-                        className={`flex items-center gap-2 px-3.5 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                        className={`flex flex-col items-start gap-0.5 px-3.5 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
                           isSelected
                             ? 'border-gray-900 bg-gray-900 text-white'
                             : 'border-gray-300 text-gray-700 hover:border-gray-500'
                         } ${isSoldOut && !isSelected ? 'opacity-50' : ''}`}
                       >
-                        {value}
-                        {isSoldOut && <span className="text-xs">(esgotado)</span>}
+                        <span>{value}{isSoldOut && <span className="text-xs ml-1">(esgotado)</span>}</span>
+                        {priceLabel && (
+                          <span className={`text-[11px] font-normal ${isSelected ? 'text-gray-300' : 'text-gray-500'}`}>
+                            {priceLabel}
+                          </span>
+                        )}
                       </button>
                     );
                   })}
@@ -227,9 +279,19 @@ export default function ProductActions({ product, onVariantChange }) {
       {/* Preço dinâmico */}
       <div className="mb-6">
         {incompleteSelection ? (
-          <p className="text-lg text-gray-500">
-            {hasSelectableVariants ? 'Selecione as opções acima para ver o preço' : 'Produto indisponível no momento'}
-          </p>
+          hasSelectableVariants ? (
+            <div>
+              {minReachablePrice != null && (
+                <p className="text-3xl font-bold text-gray-900 mb-1">
+                  A partir de R$ {minReachablePrice.toFixed(2).replace('.', ',')}
+                  <span className="text-base font-normal text-gray-500 ml-2">no PIX</span>
+                </p>
+              )}
+              <p className="text-sm text-gray-500">Escolha as opções acima para ver o preço exato</p>
+            </div>
+          ) : (
+            <p className="text-lg text-gray-500">Produto indisponível no momento</p>
+          )
         ) : (
           <>
             {hasPixDiscount && (
@@ -270,12 +332,16 @@ export default function ProductActions({ product, onVariantChange }) {
       </div>
 
       <div className="mb-4">
-        <label
-          htmlFor="quantity"
-          className="block text-sm font-medium text-gray-700 mb-2"
-        >
-          Quantidade
-        </label>
+        <div className="flex items-center justify-between mb-2">
+          <label htmlFor="quantity" className="block text-sm font-medium text-gray-700">
+            Quantidade
+          </label>
+          {maxQuantity != null && maxQuantity > 0 && maxQuantity <= 5 && (
+            <span className="text-xs font-semibold text-orange-600">
+              Apenas {maxQuantity} em estoque
+            </span>
+          )}
+        </div>
         <div className="flex rounded-lg shadow-md overflow-hidden">
           {/* Quantity Selector */}
           <div className="flex items-center border border-r-0 border-gray-300 bg-white rounded-l-lg">
@@ -289,13 +355,18 @@ export default function ProductActions({ product, onVariantChange }) {
               type="number"
               id="quantity"
               value={quantity}
-              onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+              onChange={(e) => {
+                const parsed = Math.max(1, parseInt(e.target.value) || 1);
+                setQuantity(maxQuantity != null ? Math.min(parsed, Math.max(maxQuantity, 1)) : parsed);
+              }}
               min="1"
+              max={maxQuantity != null ? Math.max(maxQuantity, 1) : undefined}
               className="quantity-input w-16 text-center bg-transparent text-gray-900 font-bold text-lg focus:outline-none h-full border-l border-r border-gray-300"
             />
             <button
               onClick={() => changeQuantity(1)}
-              className="px-4 h-full text-lg font-semibold text-gray-600 hover:bg-gray-100 transition-colors focus:outline-none"
+              disabled={maxQuantity != null && quantity >= maxQuantity}
+              className="px-4 h-full text-lg font-semibold text-gray-600 hover:bg-gray-100 transition-colors focus:outline-none disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
             >
               +
             </button>
