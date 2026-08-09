@@ -1,62 +1,36 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useAffiliate } from '../contexts/AffiliateContext';
 import { useCart } from '../contexts/CartContext';
-import { buildAxisOptions, findMatchingVariant, pickDefaultVariant } from '../lib/variantSelection';
+import { pickDefaultVariant } from '../lib/variantSelection';
 
 /**
  * Smart combo suggestion: mostra o produto atual + 1 ou 2 produtos complementares
  * (ex: iPhone + AirPods + Apple Watch), com preço combinado e "adicionar todos ao
- * carrinho" — mesmo quando algum deles tem variação (cor/armazenamento), escolhendo
- * uma combinação padrão sensata na hora pra não travar a compra atrás de "vá até a
- * página do produto escolher".
+ * carrinho" — mesmo quando algum deles tem variação (cor/armazenamento), uma
+ * combinação padrão já vem escolhida (a marcada como padrão, ou a primeira com
+ * estoque) em vez de empilhar seletor de cada atributo no card.
  */
 export default function ComboSuggestion({ currentProduct, suggestedProducts }) {
   const { brandColor } = useAffiliate();
   const { addToCart } = useCart();
 
-  const items = useMemo(() => {
+  const resolvedItems = useMemo(() => {
     const list = [currentProduct, ...(suggestedProducts || [])].filter(Boolean);
-    return list.map(product => ({
-      product,
-      axisOptions: product.hasVariants ? buildAxisOptions(product.variants || []) : [],
-    }));
+    return list.map(product => {
+      if (!product.hasVariants) {
+        const price = product.displayPrice ?? product.pixPrice ?? product.price ?? 0;
+        return { product, variant: null, price, available: true };
+      }
+      const variant = pickDefaultVariant(product.variants || []);
+      const available = !!(variant && variant.stockQuantity > 0);
+      return { product, variant, price: variant?.pixPrice ?? 0, available };
+    });
   }, [currentProduct, suggestedProducts]);
 
-  const [selections, setSelections] = useState(() => {
-    const initial = {};
-    items.forEach(({ product }) => {
-      if (product.hasVariants) {
-        const defaultVariant = pickDefaultVariant(product.variants || []);
-        initial[product.id] = defaultVariant ? { ...defaultVariant.attributes } : {};
-      }
-    });
-    return initial;
-  });
+  if (resolvedItems.length < 2) return null;
 
-  if (items.length < 2) return null;
-
-  const selectAttribute = (productId, axisName, value) => {
-    setSelections(prev => ({
-      ...prev,
-      [productId]: { ...prev[productId], [axisName]: value },
-    }));
-  };
-
-  const resolveItem = ({ product }) => {
-    if (!product.hasVariants) {
-      const price = product.displayPrice ?? product.pixPrice ?? product.price ?? 0;
-      return { product, variant: null, price, available: true };
-    }
-    const variants = product.variants || [];
-    const selectedAttrs = selections[product.id] || {};
-    const variant = variants.length > 0 ? findMatchingVariant(variants, selectedAttrs) : null;
-    const available = !!(variant && variant.stockQuantity > 0);
-    return { product, variant, price: variant?.pixPrice ?? 0, available };
-  };
-
-  const resolvedItems = items.map(resolveItem);
   const comboTotal = resolvedItems.reduce((sum, r) => sum + (r.price || 0), 0);
   const canAddComboDirectly = resolvedItems.every(r => r.available);
 
@@ -110,19 +84,12 @@ export default function ComboSuggestion({ currentProduct, suggestedProducts }) {
                     </svg>
                   </div>
                 )}
-                <ComboItem
-                  resolved={resolved}
-                  label={index === 0 ? 'Este produto' : 'Sugestão'}
-                  brandColor={brandColor}
-                  selectedAttrs={selections[resolved.product.id] || {}}
-                  onSelectAttribute={(axisName, value) => selectAttribute(resolved.product.id, axisName, value)}
-                  axisOptions={items[index].axisOptions}
-                />
+                <ComboItem resolved={resolved} label={index === 0 ? 'Este produto' : 'Sugestão'} brandColor={brandColor} />
               </div>
             ))}
           </div>
 
-          <div className="hidden md:block w-px h-24 bg-gray-200 mx-1 flex-shrink-0" />
+          <div className="hidden md:block w-px h-20 bg-gray-200 mx-1 flex-shrink-0" />
 
           <div className="flex-shrink-0 text-center md:text-right pt-2 md:pt-0 border-t md:border-t-0 border-gray-100">
             <p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">
@@ -144,7 +111,7 @@ export default function ComboSuggestion({ currentProduct, suggestedProducts }) {
               </button>
             ) : (
               <p className="mt-3 text-xs text-gray-500 max-w-[200px] md:ml-auto">
-                Combinação indisponível — tente outra opção acima
+                Indisponível no momento
               </p>
             )}
           </div>
@@ -154,15 +121,16 @@ export default function ComboSuggestion({ currentProduct, suggestedProducts }) {
   );
 }
 
-function ComboItem({ resolved, label, brandColor, selectedAttrs, onSelectAttribute, axisOptions }) {
-  const { product, price, available } = resolved;
+function ComboItem({ resolved, label, brandColor }) {
+  const { product, variant, price, available } = resolved;
+  const attributesLabel = variant ? Object.values(variant.attributes).join(' • ') : null;
 
   return (
     <div className="flex items-center gap-3 min-w-0">
       <a href={`/produto/${product.slug}`} className="flex-shrink-0">
         <div className="w-20 h-20 md:w-24 md:h-24 bg-gray-50 rounded-xl border border-gray-100 overflow-hidden">
           <img
-            src={resolved.variant?.imageUrl || product.image_url || product.image}
+            src={variant?.imageUrl || product.image_url || product.image}
             alt={product.name}
             className="w-full h-full object-contain p-2"
           />
@@ -177,32 +145,9 @@ function ComboItem({ resolved, label, brandColor, selectedAttrs, onSelectAttribu
             {product.name}
           </h4>
         </a>
-
-        {axisOptions.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-1.5">
-            {axisOptions.map(axis => (
-              <div key={axis.name} className="flex flex-wrap gap-1">
-                {axis.values.map(value => {
-                  const isSelected = selectedAttrs[axis.name] === value;
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => onSelectAttribute(axis.name, value)}
-                      className="px-2 py-0.5 rounded-full text-[11px] font-medium border transition-colors"
-                      style={isSelected
-                        ? { backgroundColor: brandColor || '#0c0e0b', borderColor: brandColor || '#0c0e0b', color: '#ffffff' }
-                        : { borderColor: '#e5e7eb', color: '#4b5563' }}
-                    >
-                      {value}
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
+        {attributesLabel && (
+          <p className="text-xs text-gray-500 mt-0.5">{attributesLabel}</p>
         )}
-
         <p className="text-base font-bold mt-1.5" style={{ color: brandColor || '#0c0e0b' }}>
           {available ? `R$ ${price.toFixed(2).replace('.', ',')}` : 'Indisponível'}
         </p>
