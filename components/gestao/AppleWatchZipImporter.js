@@ -19,6 +19,27 @@ function contentTypeFor(filename) {
   return 'image/jpeg';
 }
 
+// Monta um índice "NomeDaLinha/NomeDaPasta" -> caminho completo dentro do zip, não
+// importa quantos níveis de pasta vierem antes (ex: zip pode vir só com "Series 11/..."
+// no topo, ou aninhado tipo "fotos/Apple Watch/Series 11/...", ou até com as 3 linhas
+// juntas dentro de um único zip "Apple Watch/SE 3/...", "Apple Watch/Series 11/..." etc.
+// — o que importa é achar em algum ponto do caminho o par de pastas consecutivas
+// "<lineFolder>/<pastaDoSKU>").
+function buildFolderIndex(zip) {
+  const index = new Map();
+  for (const name of Object.keys(zip.files)) {
+    if (zip.files[name].dir) continue;
+    const dirParts = name.split('/').slice(0, -1); // remove o nome do arquivo, sobra só as pastas
+    for (let i = 0; i < dirParts.length - 1; i++) {
+      const key = `${dirParts[i]}/${dirParts[i + 1]}`;
+      if (!index.has(key)) {
+        index.set(key, dirParts.slice(0, i + 2).join('/') + '/');
+      }
+    }
+  }
+  return index;
+}
+
 // Pega os arquivos de imagem de uma pasta dentro do zip, ignora lixo do macOS e
 // coloca a foto "de frente" primeiro (vira a capa do SKU). Até 4 fotos por SKU.
 function listImageEntries(zip, folderPrefix) {
@@ -106,6 +127,7 @@ export default function AppleWatchZipImporter() {
 
     const { id: productId, hasCoverImage } = await findOrCreateProduct(line);
     const existingSkus = await getExistingSkus(productId);
+    const folderIndex = buildFolderIndex(zip);
 
     const rows = [];
     let firstImageUrl = null;
@@ -117,8 +139,8 @@ export default function AppleWatchZipImporter() {
         continue;
       }
 
-      const folderPrefix = `${line.lineFolder}/${entry.folder}/`;
-      const imageEntries = listImageEntries(zip, folderPrefix);
+      const folderPrefix = folderIndex.get(`${line.lineFolder}/${entry.folder}`);
+      const imageEntries = folderPrefix ? listImageEntries(zip, folderPrefix) : [];
       if (imageEntries.length === 0) {
         appendLog(`  [aviso] pasta não encontrada no zip: ${entry.folder}`);
         continue;

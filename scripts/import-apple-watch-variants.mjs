@@ -106,6 +106,32 @@ async function preflightCheck() {
   console.log('✅ Permissões OK — pode confiar no restante do import.\n');
 }
 
+// Monta um índice "NomeDaLinha/NomeDaPasta" -> caminho completo em disco, não importa
+// quantos níveis de pasta vierem antes (ex: pode ser <baseDir>/Series 11/..., ou
+// <baseDir>/fotos/Apple Watch/Series 11/..., etc. — o que importa é achar em algum
+// ponto da árvore o par de pastas consecutivas "<lineFolder>/<pastaDoSKU>").
+function buildFolderIndex(root, maxDepth = 8) {
+  const index = new Map();
+  function walk(dir, depth) {
+    if (depth > maxDepth) return;
+    let items;
+    try {
+      items = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const item of items) {
+      if (!item.isDirectory() || item.name.startsWith('__MACOSX') || item.name.startsWith('.')) continue;
+      const full = path.join(dir, item.name);
+      const key = `${path.basename(dir)}/${item.name}`;
+      if (!index.has(key)) index.set(key, full);
+      walk(full, depth + 1);
+    }
+  }
+  walk(root, 0);
+  return index;
+}
+
 // Lista os arquivos de imagem de uma pasta, ignorando lixo do macOS (__MACOSX, ._*),
 // e coloca a foto "de frente" primeiro (fica a capa do SKU).
 function listImageFiles(dirPath) {
@@ -171,13 +197,8 @@ async function ensureProduct(line) {
   return created.id;
 }
 
-async function importLine(line) {
+async function importLine(line, folderIndex) {
   console.log(`\n=== ${line.productName} ===`);
-  const lineDir = path.join(baseDir, line.lineFolder);
-  if (!fs.existsSync(lineDir)) {
-    console.error(`  Pasta não encontrada: ${lineDir} — pulando este produto.`);
-    return;
-  }
 
   const productId = await ensureProduct(line);
 
@@ -192,8 +213,8 @@ async function importLine(line) {
   const rows = [];
 
   for (const entry of line.entries) {
-    const folderPath = path.join(lineDir, entry.folder);
-    if (!fs.existsSync(folderPath)) {
+    const folderPath = folderIndex.get(`${line.lineFolder}/${entry.folder}`);
+    if (!folderPath) {
       console.warn(`  [aviso] pasta de fotos não encontrada, pulando: ${entry.folder}`);
       continue;
     }
@@ -257,8 +278,9 @@ async function importLine(line) {
 async function main() {
   await preflightCheck();
   console.log(`Lendo pastas em: ${baseDir}`);
+  const folderIndex = buildFolderIndex(baseDir);
   for (const line of PRODUCT_LINES) {
-    await importLine(line);
+    await importLine(line, folderIndex);
   }
   console.log('\nPronto! Agora abre o admin -> Produtos -> cada Apple Watch -> "Gerenciar Variantes"');
   console.log('e preenche custo/margem/estoque de cada SKU (o script não define preço).');
