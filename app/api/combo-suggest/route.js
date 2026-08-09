@@ -67,7 +67,11 @@ export async function POST(request) {
     // (category_slug em uns, category com o nome de exibição em outros — mesma
     // inconsistência que /categoria/[slug]/page.js já trata) — por isso tenta
     // primeiro por category_slug e, se não achar nada, cai pra category por nome.
-    const PRODUCT_COLUMNS = 'id, slug, name, image_url, price, cost_price, cost_currency, import_tax_percentage, supplier_margin_percentage, is_featured, rating';
+    const PRODUCT_COLUMNS = `
+      id, slug, name, image_url, price, cost_price, cost_currency, import_tax_percentage,
+      supplier_margin_percentage, is_featured, rating,
+      variants:product_variants(cost_price, cost_currency, import_tax_percentage, is_active, stock_quantity)
+    `;
 
     const fetchCategoryRows = async (categorySlug) => {
       const { data: bySlug, error: slugError } = await supabase
@@ -100,16 +104,43 @@ export async function POST(request) {
       const priced = rows
         .map((p) => {
           try {
-            const costPrice = parseFloat(p.cost_price) || 0;
+            let costPriceBRL = null;
 
-            if (costPrice > 0) {
-              const costPriceBRL = resolveCostPriceBRL({
-                costPrice,
+            const directCost = parseFloat(p.cost_price) || 0;
+            if (directCost > 0) {
+              costPriceBRL = resolveCostPriceBRL({
+                costPrice: directCost,
                 costCurrency: p.cost_currency,
                 importTaxPercentage: p.import_tax_percentage,
                 usdBrlRate: config.usdBrlRate,
                 defaultImportTaxPercentage: config.defaultImportTaxPercentage,
               });
+            } else if (Array.isArray(p.variants) && p.variants.length > 0) {
+              // products.cost_price ficou 0 (nunca sincronizou depois de criar as
+              // variantes) — calcula direto da variante mais barata com estoque,
+              // mesma fórmula que syncProductFromVariants() usa pra gravar isso
+              // no produto. Sem isso, produto com variante fica invisível pro
+              // assistente mesmo tendo custo e estoque cadastrados nos SKUs.
+              // Não depende do flag has_variants do produto — esse flag pode estar
+              // desatualizado pelo mesmo motivo (mesmo problema documentado em
+              // lib/products.js: a fonte de verdade é a linha existir em
+              // product_variants, não o checkbox salvo no formulário do produto).
+              const eligible = p.variants.filter(
+                (v) => v.is_active !== false && parseFloat(v.cost_price) > 0 && (v.stock_quantity == null || v.stock_quantity > 0)
+              );
+              if (eligible.length > 0) {
+                const costsInBRL = eligible.map((v) => resolveCostPriceBRL({
+                  costPrice: parseFloat(v.cost_price),
+                  costCurrency: v.cost_currency || 'BRL',
+                  importTaxPercentage: v.import_tax_percentage != null ? parseFloat(v.import_tax_percentage) : null,
+                  usdBrlRate: config.usdBrlRate,
+                  defaultImportTaxPercentage: config.defaultImportTaxPercentage,
+                }));
+                costPriceBRL = Math.min(...costsInBRL);
+              }
+            }
+
+            if (costPriceBRL != null && costPriceBRL > 0) {
               const prices = calculateAllPrices({
                 costPrice: costPriceBRL,
                 supplierMarginPercentage: parseFloat(p.supplier_margin_percentage) || 10,
@@ -129,10 +160,9 @@ export async function POST(request) {
               };
             }
 
-            // Sem custo cadastrado (comum em produto com variantes que ainda não
-            // sincronizou, ou cadastro antigo) — mesmo fallback que a home e a
-            // página de categoria usam: mostra pelo preço de venda já salvo em
-            // vez de excluir o produto inteiro da sugestão.
+            // Último recurso: sem custo em lugar nenhum (produto nem variante) —
+            // usa o preço de venda já salvo em vez de excluir o produto inteiro,
+            // mesmo fallback que a home e a página de categoria usam.
             const fallbackPrice = parseFloat(p.price) || 0;
             if (fallbackPrice <= 0) return null;
 
