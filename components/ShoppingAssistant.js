@@ -212,8 +212,8 @@ export default function ShoppingAssistant() {
               <SparkleIcon size={11} />
               Assistente de compra
             </div>
-            <h2 className="assist-heading">Não sabe o que levar?</h2>
-            <p className="assist-subheading">A gente monta o combo ideal pro seu bolso em 3 passos rápidos.</p>
+            <h2 className="assist-heading">Quanto dá pra levar com o seu orçamento?</h2>
+            <p className="assist-subheading">Escolha o que você quer, diga quanto cabe no seu bolso por mês e a gente monta o combo que você pode levar hoje.</p>
 
             {stepNumber && (
               <div className="assist-progress">
