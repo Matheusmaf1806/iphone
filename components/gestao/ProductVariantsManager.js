@@ -223,11 +223,10 @@ export default function ProductVariantsManager({ productId, productName, product
       if (!proceed) return;
     }
 
-    const existingKeys = new Set(rows.map(r => attributesKey(r.attributes)));
-
-    const newRows = combos
-      .filter(combo => !existingKeys.has(attributesKey(combo)))
-      .map(combo => ({
+    // Monta as linhas novas checando duplicidade sempre contra o estado mais atual
+    // (função de atualização, não a variável "rows" do fechamento) — clicar duas
+    // vezes seguidas em "Gerar combinações" não pode gerar SKUs repetidos.
+    const buildRow = (combo) => ({
         _key: `draft-${attributesKey(combo)}-${Math.random().toString(36).slice(2, 8)}`,
         id: null,
         attributes: combo,
@@ -241,20 +240,29 @@ export default function ProductVariantsManager({ productId, productName, product
         image_urls: [],
         is_default: false,
         is_active: true,
-      }));
+    });
 
-    if (newRows.length === 0) {
-      alert('Todas as combinações selecionadas já existem na tabela abaixo.');
-      return;
-    }
+    let addedCount = 0;
 
     setRows(prev => {
+      const existingKeys = new Set(prev.map(r => attributesKey(r.attributes)));
+      const newRows = combos
+        .filter(combo => !existingKeys.has(attributesKey(combo)))
+        .map(buildRow);
+      addedCount = newRows.length;
+
+      if (newRows.length === 0) return prev;
+
       const merged = [...prev, ...newRows];
       if (!merged.some(r => r.is_default) && merged.length > 0) {
         merged[0] = { ...merged[0], is_default: true };
       }
       return merged;
     });
+
+    if (addedCount === 0) {
+      alert('Todas as combinações selecionadas já existem na tabela abaixo.');
+    }
   };
 
   const updateRow = (key, field, value) => {
