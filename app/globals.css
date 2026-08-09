@@ -7,7 +7,8 @@ html {
 }
 
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text',
+    'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   background-color: #ebf0f6;
   color: #0c0e0b;
 }
