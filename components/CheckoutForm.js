@@ -5,8 +5,7 @@ import { useCustomer } from '../contexts/CustomerContext';
 import { useRouter } from 'next/navigation';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { calculateAllPrices } from '../lib/pricing';
-import { SITE_NAME } from '../lib/siteConfig';
+import { calculateAllPrices, resolveCostPriceBRL } from '../lib/pricing';
 
 export default function CheckoutForm({ config }) {
   const affiliate = useAffiliate();
@@ -57,7 +56,7 @@ export default function CheckoutForm({ config }) {
   // PayPal CardFields (cartão de crédito)
   const [cardFieldsReady, setCardFieldsReady] = useState(false);
   const cardFieldsInstanceRef = useRef(null);
-  const pricingRef = useRef({ total: 0 });
+  const orderPayloadRef = useRef({ items: [], affiliateId: null, coupon: null });
 
   // Redirect if cart is empty
   useEffect(() => {
@@ -107,7 +106,21 @@ export default function CheckoutForm({ config }) {
     return cartItems.map(item => {
       // If item has cost_price, recalculate with proper margins
       if (item.costPrice || item.cost_price) {
-        const costPrice = item.costPrice || item.cost_price;
+        const rawCostPrice = item.costPrice || item.cost_price;
+        // Custo pode estar cadastrado em dólar (SKU ou produto simples) — precisa
+        // passar pela mesma conversão de câmbio + imposto de importação usada na
+        // página do produto antes de entrar na cascata de margens, senão o resumo
+        // do checkout (e o valor cobrado no cartão/PayPal) fica muito menor que o
+        // preço real exibido na página do produto.
+        const costCurrency = item.costCurrency || item.cost_currency || 'BRL';
+        const importTaxPercentage = item.importTaxPercentage ?? item.import_tax_percentage ?? null;
+        const costPrice = resolveCostPriceBRL({
+          costPrice: rawCostPrice,
+          costCurrency,
+          importTaxPercentage,
+          usdBrlRate: config.usdBrlRate,
+          defaultImportTaxPercentage: config.defaultImportTaxPercentage,
+        });
         const supplierMargin = item.supplierMarginPercentage || item.supplier_margin_percentage || 10;
         const affiliateMargin = (itemMarginOverrides[item.lineId] !== undefined)
           ? itemMarginOverrides[item.lineId]
@@ -182,6 +195,22 @@ export default function CheckoutForm({ config }) {
     };
   }, [itemsWithPrices, formData.paymentMethod, config, appliedCoupon]);
 
+  // Payload de itens enviado tanto pra criação da cobrança PayPal (create-order)
+  // quanto pra criação do pedido (orders/create) — o mesmo formato nos dois casos
+  // garante que o servidor recalcule exatamente o mesmo valor nas duas pontas.
+  const buildOrderItemsPayload = () => itemsWithPrices.map(item => ({
+    productId: item.id,
+    variantId: item.variantId || null,
+    sku: item.sku || null,
+    attributes: item.attributes || null,
+    quantity: item.quantity,
+    costPrice: item.costPrice || item.cost_price || 0,
+    supplierMarginPercentage: item.supplierMarginPercentage || item.supplier_margin_percentage || 10,
+    customMarkup: (itemMarginOverrides[item.lineId] !== undefined)
+      ? itemMarginOverrides[item.lineId]
+      : (item.customMarkup !== undefined ? parseFloat(item.customMarkup) : null),
+  }));
+
   // Render PayPal buttons
   useEffect(() => {
     if (formData.paymentMethod === 'paypal' && paypalLoaded && paypalRef.current && window.paypal) {
@@ -193,16 +222,22 @@ export default function CheckoutForm({ config }) {
           shape: 'rect',
           label: 'pay',
         },
-        createOrder: (data, actions) => {
-          return actions.order.create({
-            purchase_units: [{
-              amount: {
-                value: pricing.total.toFixed(2),
-                currency_code: 'BRL',
-              },
-              description: `Pedido ${SITE_NAME} - ${cart.length} itens`,
-            }],
+        createOrder: async () => {
+          // O valor cobrado é recalculado no servidor a partir dos itens do
+          // carrinho — nunca confiamos num total calculado no navegador pra
+          // autorizar a cobrança (ver /api/payments/paypal/create-order).
+          const res = await fetch('/api/payments/paypal/create-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              items: buildOrderItemsPayload(),
+              affiliateId: affiliate?.affiliateId || affiliate?.id || null,
+              coupon: appliedCoupon ? { discount_amount: appliedCoupon.discount_amount } : null,
+            }),
           });
+          const data = await res.json();
+          if (!data.paypalOrderId) throw new Error(data.error || 'Falha ao criar pedido');
+          return data.paypalOrderId;
         },
         onApprove: async (data, actions) => {
           const details = await actions.order.capture();
@@ -216,8 +251,15 @@ export default function CheckoutForm({ config }) {
     }
   }, [formData.paymentMethod, paypalLoaded, pricing?.total]);
 
-  // Manter ref do pricing atualizado para usar nos callbacks do PayPal CardFields
-  pricingRef.current = pricing;
+  // Manter ref atualizada para usar no callback do PayPal CardFields (a instância é
+  // criada uma vez pelo efeito abaixo, então o createOrder precisa ler o carrinho/
+  // afiliado/cupom mais recentes por ref em vez de fechar sobre valores do render em
+  // que a instância foi montada).
+  orderPayloadRef.current = {
+    items: buildOrderItemsPayload(),
+    affiliateId: affiliate?.affiliateId || affiliate?.id || null,
+    coupon: appliedCoupon ? { discount_amount: appliedCoupon.discount_amount } : null,
+  };
 
   // Inicializar PayPal CardFields para cartão de crédito
   useEffect(() => {
@@ -233,10 +275,13 @@ export default function CheckoutForm({ config }) {
 
     const cardFields = window.paypal.CardFields({
       createOrder: async () => {
+        // O valor cobrado é recalculado no servidor a partir dos itens do carrinho
+        // (ver /api/payments/paypal/create-order) — nunca confiamos num total
+        // calculado no navegador pra autorizar a cobrança.
         const res = await fetch('/api/payments/paypal/create-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: pricingRef.current.total }),
+          body: JSON.stringify(orderPayloadRef.current),
         });
         const data = await res.json();
         if (!data.paypalOrderId) throw new Error(data.error || 'Falha ao criar pedido');
@@ -459,18 +504,7 @@ export default function CheckoutForm({ config }) {
           method,
           paypalTransactionId: paypalTransactionId || null,
         },
-        items: itemsWithPrices.map(item => ({
-          productId: item.id,
-          variantId: item.variantId || null,
-          sku: item.sku || null,
-          attributes: item.attributes || null,
-          quantity: item.quantity,
-          costPrice: item.costPrice || item.cost_price || 0,
-          supplierMarginPercentage: item.supplierMarginPercentage || item.supplier_margin_percentage || 10,
-          customMarkup: (itemMarginOverrides[item.lineId] !== undefined)
-            ? itemMarginOverrides[item.lineId]
-            : (item.customMarkup !== undefined ? parseFloat(item.customMarkup) : null),
-        })),
+        items: buildOrderItemsPayload(),
         affiliateId: affiliate?.affiliateId || affiliate?.id || null,
         coupon: appliedCoupon ? {
           id: appliedCoupon.coupon.id,
@@ -1370,7 +1404,16 @@ export default function CheckoutForm({ config }) {
               const rawInput = modalMarginInputs[item.lineId] ?? String(affiliate?.commission_percentage || config.defaultAffiliateMargin);
               const marginVal = parseFloat(rawInput);
               const valid = !isNaN(marginVal) && marginVal >= 0 && marginVal < 100;
-              const costPrice = item.costPrice || item.cost_price;
+              const rawCostPrice = item.costPrice || item.cost_price;
+              const costPrice = rawCostPrice
+                ? resolveCostPriceBRL({
+                    costPrice: rawCostPrice,
+                    costCurrency: item.costCurrency || item.cost_currency || 'BRL',
+                    importTaxPercentage: item.importTaxPercentage ?? item.import_tax_percentage ?? null,
+                    usdBrlRate: config.usdBrlRate,
+                    defaultImportTaxPercentage: config.defaultImportTaxPercentage,
+                  })
+                : rawCostPrice;
               const supplierMargin = item.supplierMarginPercentage || item.supplier_margin_percentage || 10;
 
               let previewPix = 0, previewCard = 0, commissionUnit = 0;

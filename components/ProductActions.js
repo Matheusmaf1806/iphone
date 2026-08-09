@@ -133,6 +133,8 @@ export default function ProductActions({ product, onVariantChange }) {
           pixPrice: selectedVariant.pixPrice,
           cardPrice: selectedVariant.cardPrice,
           costPrice: selectedVariant.costPrice,
+          costCurrency: selectedVariant.costCurrency ?? product.costCurrency,
+          importTaxPercentage: selectedVariant.importTaxPercentage ?? product.importTaxPercentage,
           supplierMarginPercentage: selectedVariant.supplierMarginPercentage ?? product.supplierMarginPercentage,
           installmentValue: selectedVariant.installmentValue,
           image_url: selectedVariant.imageUrl || product.image_url,

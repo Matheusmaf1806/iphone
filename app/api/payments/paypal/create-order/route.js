@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { SITE_NAME } from '../../../../../lib/siteConfig';
+import { createServerClient } from '../../../../../lib/supabase/server';
+import { getPlatformConfig } from '../../../../../lib/affiliateTracking';
+import { priceCartItems } from '../../../../../lib/orderPricing';
 
 const getPayPalBaseUrl = () =>
   process.env.PAYPAL_ENVIRONMENT === 'production'
@@ -37,7 +40,51 @@ async function getPayPalAccessToken() {
 
 export async function POST(request) {
   try {
-    const { amount } = await request.json();
+    const { items, affiliateId, coupon } = await request.json();
+
+    if (!items || items.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Carrinho vazio' },
+        { status: 400 }
+      );
+    }
+
+    // O valor cobrado nunca vem do navegador: é recalculado aqui a partir do
+    // productId/variantId/quantity de cada item, com a mesma cascata de custo +
+    // margens usada em /api/orders/create — senão uma requisição adulterada
+    // conseguiria autorizar a cobrança por qualquer valor, mesmo que o pedido
+    // criado depois no banco mostre o valor "correto".
+    const supabase = createServerClient();
+    if (!supabase) {
+      return NextResponse.json(
+        { success: false, error: 'Serviço não configurado' },
+        { status: 500 }
+      );
+    }
+
+    const config = await getPlatformConfig();
+
+    let affiliate = null;
+    if (affiliateId) {
+      const { data: affiliateData } = await supabase
+        .from('affiliates')
+        .select('id, commission_rate')
+        .eq('id', affiliateId)
+        .eq('is_active', true)
+        .single();
+      affiliate = affiliateData;
+    }
+
+    const priced = await priceCartItems({ supabase, items, affiliate, config, isPix: false });
+    if (priced.error) {
+      return NextResponse.json({ success: false, error: priced.error }, { status: 400 });
+    }
+
+    let amount = priced.subtotal;
+    if (coupon?.discount_amount) {
+      amount -= coupon.discount_amount;
+    }
+    amount = parseFloat(amount.toFixed(2));
 
     if (!amount || amount <= 0) {
       return NextResponse.json(
