@@ -43,6 +43,9 @@ export default function ProductVariantsManager({ productId, productName, product
   const [bulkCost, setBulkCost] = useState('');
   const [bulkStock, setBulkStock] = useState('');
   const [platformConfig, setPlatformConfig] = useState({ usdBrlRate: 5.5, defaultImportTaxPercentage: 0 });
+  // Esconde o seletor de eixos/valores por trás de um botão quando já existem SKUs
+  // cadastrados, pra não misturar "adicionar novo" com uma parede de variantes antigas.
+  const [showAddPanel, setShowAddPanel] = useState(true);
 
   useEffect(() => {
     loadData();
@@ -75,25 +78,13 @@ export default function ProductVariantsManager({ productId, productName, product
 
       const existingVariants = variantsData.success ? variantsData.data : [];
 
-      // Deduzir quais eixos/valores já estão em uso a partir das variantes existentes
-      const usedTypeIds = new Set();
-      const usedValueIds = {};
-      existingVariants.forEach(v => {
-        Object.keys(v.attributes || {}).forEach(typeName => {
-          const type = types.find(t => t.name === typeName);
-          if (!type) return;
-          usedTypeIds.add(type.id);
-          const value = v.attributes[typeName];
-          const valueObj = (type.values || []).find(val => val.value === value);
-          if (valueObj) {
-            if (!usedValueIds[type.id]) usedValueIds[type.id] = new Set();
-            usedValueIds[type.id].add(valueObj.id);
-          }
-        });
-      });
-
-      setSelectedTypeIds(usedTypeIds);
-      setSelectedValueIds(usedValueIds);
+      // Não pré-marca os eixos/valores já usados pelas variantes existentes — com
+      // muitos SKUs cadastrados isso vira uma parede de opções marcadas e confunde
+      // mais do que ajuda. O seletor de "adicionar novas variantes" sempre começa
+      // em branco (ver toggleAddPanel).
+      setSelectedTypeIds(new Set());
+      setSelectedValueIds({});
+      setShowAddPanel(existingVariants.length === 0);
       setRows(existingVariants.map(v => ({
         _key: v.id,
         id: v.id,
@@ -223,11 +214,10 @@ export default function ProductVariantsManager({ productId, productName, product
       if (!proceed) return;
     }
 
-    const existingKeys = new Set(rows.map(r => attributesKey(r.attributes)));
-
-    const newRows = combos
-      .filter(combo => !existingKeys.has(attributesKey(combo)))
-      .map(combo => ({
+    // Monta as linhas novas checando duplicidade sempre contra o estado mais atual
+    // (função de atualização, não a variável "rows" do fechamento) — clicar duas
+    // vezes seguidas em "Gerar combinações" não pode gerar SKUs repetidos.
+    const buildRow = (combo) => ({
         _key: `draft-${attributesKey(combo)}-${Math.random().toString(36).slice(2, 8)}`,
         id: null,
         attributes: combo,
@@ -241,20 +231,29 @@ export default function ProductVariantsManager({ productId, productName, product
         image_urls: [],
         is_default: false,
         is_active: true,
-      }));
+    });
 
-    if (newRows.length === 0) {
-      alert('Todas as combinações selecionadas já existem na tabela abaixo.');
-      return;
-    }
+    let addedCount = 0;
 
     setRows(prev => {
+      const existingKeys = new Set(prev.map(r => attributesKey(r.attributes)));
+      const newRows = combos
+        .filter(combo => !existingKeys.has(attributesKey(combo)))
+        .map(buildRow);
+      addedCount = newRows.length;
+
+      if (newRows.length === 0) return prev;
+
       const merged = [...prev, ...newRows];
       if (!merged.some(r => r.is_default) && merged.length > 0) {
         merged[0] = { ...merged[0], is_default: true };
       }
       return merged;
     });
+
+    if (addedCount === 0) {
+      alert('Todas as combinações selecionadas já existem na tabela abaixo.');
+    }
   };
 
   const updateRow = (key, field, value) => {
@@ -405,6 +404,26 @@ export default function ProductVariantsManager({ productId, productName, product
             <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded">{error}</div>
           )}
 
+          {/* Botão pra abrir o painel de "adicionar novas variantes" isolado do
+              restante — evita misturar com uma tabela grande de SKUs já existentes */}
+          {rows.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                if (!showAddPanel) {
+                  setSelectedTypeIds(new Set());
+                  setSelectedValueIds({});
+                }
+                setShowAddPanel(prev => !prev);
+              }}
+              className="w-full py-3 border-2 border-dashed border-blue-300 text-blue-700 font-semibold rounded-lg hover:bg-blue-50 transition-colors flex items-center justify-center gap-2"
+            >
+              {showAddPanel ? '▾ Fechar' : '+ Adicionar novas variantes'}
+            </button>
+          )}
+
+          {showAddPanel && (
+          <>
           {/* Passo 1: escolher eixos */}
           <div className="bg-gray-50 p-4 rounded-lg">
             <h3 className="font-semibold mb-1">1. Quais atributos esse produto varia?</h3>
@@ -497,6 +516,8 @@ export default function ProductVariantsManager({ productId, productName, product
               ⚙️ Gerar combinações (SKUs)
             </button>
           )}
+          </>
+          )}
 
           {/* Passo 4: tabela de SKUs */}
           {rows.length > 0 && (
@@ -532,6 +553,7 @@ export default function ProductVariantsManager({ productId, productName, product
                 <table className="min-w-full divide-y divide-gray-200 text-sm">
                   <thead className="bg-gray-50">
                     <tr>
+                      <th className="px-3 py-2"></th>
                       {axisOrder.map(name => (
                         <th key={name} className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{name}</th>
                       ))}
@@ -548,7 +570,12 @@ export default function ProductVariantsManager({ productId, productName, product
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {rows.map(row => (
-                      <tr key={row._key} className={!row.is_active ? 'opacity-50' : ''}>
+                      <tr key={row._key} className={`${!row.id ? 'bg-blue-50/50' : ''} ${!row.is_active ? 'opacity-50' : ''}`}>
+                        <td className="px-3 py-2">
+                          {!row.id && (
+                            <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold text-blue-700 bg-blue-100">NOVO</span>
+                          )}
+                        </td>
                         {axisOrder.map(name => (
                           <td key={name} className="px-3 py-2 whitespace-nowrap font-medium text-gray-700">{row.attributes[name] || '-'}</td>
                         ))}
