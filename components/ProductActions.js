@@ -42,18 +42,18 @@ export default function ProductActions({ product, onVariantChange }) {
 
   const axisOptions = useMemo(() => (isVariantProduct ? buildAxisOptions(availableVariants) : []), [isVariantProduct, availableVariants]);
 
-  const initialAttributes = useMemo(() => {
-    if (!hasSelectableVariants) return {};
-    const preferred =
-      availableVariants.find(v => v.isDefault) ||
-      availableVariants.find(v => v.stockQuantity > 0) ||
-      availableVariants[0];
-    return preferred?.attributes || {};
-  }, [hasSelectableVariants, availableVariants]);
+  // Seleção começa vazia de propósito: o cliente escolhe um eixo de cada vez (ex:
+  // Cor primeiro) e só então as opções do próximo eixo (ex: Armazenamento) aparecem,
+  // já filtradas pelo que é realmente possível combinar — em vez de mostrar tudo de
+  // uma vez com estoque calculado a partir de "qualquer variante que bater parcialmente",
+  // que podia marcar uma cor como esgotada mesmo com outra capacidade disponível nela.
+  const [selectedAttributes, setSelectedAttributes] = useState({});
 
-  const [selectedAttributes, setSelectedAttributes] = useState(initialAttributes);
-
-  const selectedVariant = hasSelectableVariants ? findMatchingVariant(availableVariants, selectedAttributes) : null;
+  // Só considera "selecionado" quando TODOS os eixos já têm valor escolhido — com
+  // seleção vazia, um match "vazio" (every() sobre objeto sem chaves) bateria com a
+  // primeira variante da lista sem o cliente ter escolhido nada.
+  const allAxesAnswered = hasSelectableVariants && axisOptions.every(a => selectedAttributes[a.name] !== undefined);
+  const selectedVariant = allAxesAnswered ? findMatchingVariant(availableVariants, selectedAttributes) : null;
   const incompleteSelection = isVariantProduct && !selectedVariant;
   const outOfStock = !!(selectedVariant && selectedVariant.stockQuantity <= 0);
   const canAddToCart = isVariantProduct ? !!(selectedVariant && !outOfStock) : true;
@@ -64,8 +64,18 @@ export default function ProductActions({ product, onVariantChange }) {
     onVariantChange?.(selectedVariant);
   }, [selectedVariant, onVariantChange]);
 
-  const selectAttribute = (axisName, value) => {
-    setSelectedAttributes(prev => ({ ...prev, [axisName]: value }));
+  // Escolher um valor limpa qualquer eixo posterior já escolhido — trocar a cor
+  // depois de já ter escolhido armazenamento não pode deixar uma combinação inválida
+  // "presa" selecionada.
+  const selectAttribute = (axisIndex, axisName, value) => {
+    setSelectedAttributes(prev => {
+      const next = {};
+      axisOptions.slice(0, axisIndex).forEach(a => {
+        if (prev[a.name] !== undefined) next[a.name] = prev[a.name];
+      });
+      next[axisName] = value;
+      return next;
+    });
   };
 
   const changeQuantity = (amount) => {
@@ -130,37 +140,55 @@ export default function ProductActions({ product, onVariantChange }) {
       )}
 
       {hasSelectableVariants && (
-        <div className="mb-6 space-y-4">
-          {axisOptions.map(axis => {
-            const isColorAxis = axis.values.some(v => product.variantSwatches?.[axis.name]?.[v]);
+        <div className="mb-6 space-y-5">
+          {axisOptions.map((axis, axisIndex) => {
+            // Só mostra este eixo depois que todos os anteriores já foram escolhidos —
+            // é o que dá o efeito de "escolhe a cor, aí carregam as opções de
+            // armazenamento pra aquela cor", em vez de despejar tudo de uma vez.
+            const priorAxes = axisOptions.slice(0, axisIndex);
+            const priorAnswered = priorAxes.every(a => selectedAttributes[a.name] !== undefined);
+            if (!priorAnswered) return null;
+
+            // Candidatas = variantes que já batem com tudo que foi escolhido até aqui.
+            const candidateVariants = availableVariants.filter(v =>
+              priorAxes.every(a => v.attributes[a.name] === selectedAttributes[a.name])
+            );
+
+            // Só valores realmente alcançáveis a partir da escolha anterior entram na
+            // lista — nada de mostrar uma opção que não existe pra essa combinação.
+            const reachableValues = axis.values.filter(value =>
+              candidateVariants.some(v => v.attributes[axis.name] === value)
+            );
+
+            const isColorAxis = reachableValues.some(v => product.variantSwatches?.[axis.name]?.[v]);
 
             return (
               <div key={axis.name}>
                 <p className="text-sm font-semibold text-gray-700 mb-2">
-                  {axis.name}
+                  {axisIndex + 1}. {axis.name}
                   {selectedAttributes[axis.name] && (
                     <span className="font-normal text-gray-500"> — {selectedAttributes[axis.name]}</span>
                   )}
                 </p>
                 <div className="flex flex-wrap gap-2.5">
-                  {axis.values.map(value => {
+                  {reachableValues.map(value => {
                     const isSelected = selectedAttributes[axis.name] === value;
                     const swatchHex = product.variantSwatches?.[axis.name]?.[value];
-                    const wouldMatch = findMatchingVariant(availableVariants, { ...selectedAttributes, [axis.name]: value });
-                    const disabled = !wouldMatch;
-                    const isSoldOut = wouldMatch && wouldMatch.stockQuantity <= 0;
+                    // Esgotado de verdade = TODAS as variantes que batem com o que já foi
+                    // escolhido + esse valor estão sem estoque (não só a primeira encontrada).
+                    const matchingForValue = candidateVariants.filter(v => v.attributes[axis.name] === value);
+                    const isSoldOut = matchingForValue.length > 0 && matchingForValue.every(v => v.stockQuantity <= 0);
 
                     if (isColorAxis && swatchHex) {
                       return (
                         <button
                           key={value}
                           type="button"
-                          onClick={() => !disabled && selectAttribute(axis.name, value)}
-                          disabled={disabled}
+                          onClick={() => selectAttribute(axisIndex, axis.name, value)}
                           title={isSoldOut ? `${value} — esgotado` : value}
                           className={`relative w-10 h-10 rounded-full flex-shrink-0 transition-all ${
                             isSelected ? 'ring-2 ring-offset-2 ring-gray-900' : 'ring-1 ring-offset-1 ring-gray-300 hover:ring-gray-500'
-                          } ${disabled ? 'opacity-30 cursor-not-allowed' : ''}`}
+                          }`}
                           style={{ backgroundColor: swatchHex }}
                         >
                           {isSoldOut && (
@@ -176,14 +204,11 @@ export default function ProductActions({ product, onVariantChange }) {
                       <button
                         key={value}
                         type="button"
-                        onClick={() => !disabled && selectAttribute(axis.name, value)}
-                        disabled={disabled}
+                        onClick={() => selectAttribute(axisIndex, axis.name, value)}
                         title={isSoldOut ? `${value} — esgotado` : value}
                         className={`flex items-center gap-2 px-3.5 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
                           isSelected
                             ? 'border-gray-900 bg-gray-900 text-white'
-                            : disabled
-                            ? 'border-gray-200 text-gray-300 cursor-not-allowed'
                             : 'border-gray-300 text-gray-700 hover:border-gray-500'
                         } ${isSoldOut && !isSelected ? 'opacity-50' : ''}`}
                       >
