@@ -243,9 +243,12 @@ export default function ProductActions({ product, onVariantChange }) {
                             onClick={() => selectAttribute(axisIndex, axis.name, value)}
                             title={isSoldOut ? `${value} — esgotado` : value}
                             className={`relative w-10 h-10 rounded-full flex-shrink-0 transition-all ${
-                              isSelected ? 'ring-2 ring-offset-2 ring-gray-900' : 'ring-1 ring-offset-1 ring-gray-300 hover:ring-gray-500'
+                              isSelected ? 'ring-2 ring-offset-2' : 'ring-1 ring-offset-1 ring-gray-300 hover:ring-gray-500'
                             }`}
-                            style={{ backgroundColor: swatchHex }}
+                            style={{
+                              backgroundColor: swatchHex,
+                              ...(isSelected ? { '--tw-ring-color': affiliate.buttonColor || '#0043f7' } : {}),
+                            }}
                           >
                             {isSoldOut && (
                               <span className="absolute inset-0 flex items-center justify-center">
@@ -270,9 +273,14 @@ export default function ProductActions({ product, onVariantChange }) {
                         title={isSoldOut ? `${value} — esgotado` : value}
                         className={`flex flex-col items-start gap-0.5 px-3.5 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
                           isSelected
-                            ? 'border-gray-900 bg-gray-900 text-white'
+                            ? 'text-white'
                             : 'border-gray-300 text-gray-700 hover:border-gray-500'
                         } ${isSoldOut && !isSelected ? 'opacity-50' : ''}`}
+                        style={isSelected ? {
+                          borderColor: affiliate.buttonColor || '#0043f7',
+                          backgroundColor: affiliate.buttonColor || '#0043f7',
+                          color: affiliate.buttonTextColor || '#ffffff',
+                        } : undefined}
                       >
                         <span>{value}{isSoldOut && <span className="text-xs ml-1">(esgotado)</span>}</span>
                         {priceLabel && (

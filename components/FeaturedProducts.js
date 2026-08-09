@@ -123,7 +123,10 @@ export default function FeaturedProducts({ products, title = 'Produtos em Destaq
     </>
   );
 
-  if (compact) return content;
+  // Em modo compact isso entra direto como filho de um grid (Apple Watch / AirPods
+  // lado a lado) — precisa de UM elemento só envolvendo tudo, senão cada pedaço do
+  // Fragment (título, carrossel) vira um item separado do grid e a coluna quebra.
+  if (compact) return <div>{content}</div>;
 
   return (
     <section className="py-10 md:py-14 bg-white">

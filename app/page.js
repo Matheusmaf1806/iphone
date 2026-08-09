@@ -17,8 +17,10 @@ const CAROUSEL_CATEGORIES = ['iphone', 'mac', 'apple-watch', 'airpods', 'acessor
 
 const CATEGORY_LABELS = {
   iphone: 'iPhone',
+  mac: 'Mac',
   'apple-watch': 'Apple Watch',
   airpods: 'AirPods',
+  acessorios: 'Acessórios',
 };
 
 // Calcula preço (PIX/cartão) de uma lista de produtos crus vindos do banco — SKU mais
@@ -120,63 +122,36 @@ export default async function Home() {
 
   if (supabase) {
     try {
-      const [iphoneRows, watchRows, airpodsRows] = await Promise.all([
-        fetchCategoryProducts(supabase, 'iphone', 12),
-        fetchCategoryProducts(supabase, 'apple-watch', 8),
-        fetchCategoryProducts(supabase, 'airpods', 8),
-      ]);
-
-      iphoneProducts = priceProducts(iphoneRows, affiliate, config);
-      watchProducts = priceProducts(watchRows, affiliate, config);
-      airpodsProducts = priceProducts(airpodsRows, affiliate, config);
-    } catch (err) {
-      console.error('[Home] Error fetching featured products:', err);
-    }
-
-    // Preço "a partir de" (mais barato ativo) por categoria, pro carrossel
-    try {
-      const affiliateMargin = parseFloat(affiliate?.commission_percentage) || config.defaultAffiliateMargin;
-
-      const results = await Promise.all(
-        CAROUSEL_CATEGORIES.map((slug) =>
-          supabase
-            .from('products')
-            .select('cost_price, supplier_margin_percentage, price')
-            .eq('category', slug)
-            .eq('is_active', true)
-            .order('price', { ascending: true })
-            .limit(1)
-            .maybeSingle()
+      // Busca até 100 produtos ativos por categoria — dá pra achar o "a partir de"
+      // (mínimo real, calculado a partir do SKU/produto mais barato) com folga acima
+      // do catálogo atual, em vez de confiar em products.price (frequentemente
+      // desatualizado em produto com variação) ou olhar só 1 produto "no chute".
+      const categoryRowsBySlug = Object.fromEntries(
+        await Promise.all(
+          CAROUSEL_CATEGORIES.map(async (slug) => [slug, await fetchCategoryProducts(supabase, slug, 100)])
         )
       );
 
-      CAROUSEL_CATEGORIES.forEach((slug, i) => {
-        const cheapest = results[i]?.data;
-        if (!cheapest) {
-          startingPrices[slug] = null;
-          return;
-        }
+      const pricedBySlug = Object.fromEntries(
+        CAROUSEL_CATEGORIES.map((slug) => [slug, priceProducts(categoryRowsBySlug[slug], affiliate, config)])
+      );
 
-        const costPrice = parseFloat(cheapest.cost_price) || 0;
-        if (costPrice > 0) {
-          try {
-            const prices = calculateAllPrices({
-              costPrice,
-              supplierMarginPercentage: parseFloat(cheapest.supplier_margin_percentage) || 10,
-              affiliateMarginPercentage: affiliateMargin,
-              cardFeePercentage: config.cardFeePercentage,
-            });
-            startingPrices[slug] = prices.pixPrice;
-            return;
-          } catch (err) {
-            console.error('[Home] Carousel price calc error for category:', slug, err);
-          }
-        }
+      // Carrossel de destaque só usa iPhone/Watch/AirPods — mostra os mais recentes/
+      // em destaque primeiro (mesma ordem já vinda da query), sem precisar do
+      // catálogo inteiro na tela.
+      iphoneProducts = pricedBySlug.iphone.slice(0, 12);
+      watchProducts = pricedBySlug['apple-watch'].slice(0, 8);
+      airpodsProducts = pricedBySlug.airpods.slice(0, 8);
 
-        startingPrices[slug] = parseFloat(cheapest.price) || null;
+      // "A partir de" de cada categoria (pro carrossel "Todo o universo Apple") — o
+      // mais barato entre TODOS os produtos precificados daquela categoria, não só
+      // o primeiro da lista.
+      CAROUSEL_CATEGORIES.forEach((slug) => {
+        const priced = pricedBySlug[slug].filter((p) => p.pixPrice > 0);
+        startingPrices[slug] = priced.length > 0 ? Math.min(...priced.map((p) => p.pixPrice)) : null;
       });
     } catch (err) {
-      console.error('[Home] Error fetching carousel starting prices:', err);
+      console.error('[Home] Error fetching featured products:', err);
     }
   } else {
     console.error('[Home] Supabase client is null - env vars not configured');

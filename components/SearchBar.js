@@ -84,11 +84,14 @@ export default function SearchBar() {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder="Buscar iPhone, Mac, iPad, AirPods..."
-          className="w-full py-3 px-5 pr-12 rounded-full border-2 border-gray-300 focus:outline-none focus:border-brand-dark transition-colors"
+          className="w-full py-3 px-5 pr-12 rounded-full border-2 border-gray-300 focus:outline-none transition-colors"
+          onFocus={(e) => e.target.style.borderColor = affiliate.buttonColor || '#0043f7'}
+          onBlur={(e) => e.target.style.borderColor = 'rgb(209 213 219)'}
         />
         <button
           type="submit"
-          className="absolute right-1 top-1/2 -translate-y-1/2 bg-brand-dark text-white rounded-full p-2 hover:opacity-90 transition-colors"
+          className="absolute right-1 top-1/2 -translate-y-1/2 text-white rounded-full p-2 hover:opacity-90 transition-colors"
+          style={{ backgroundColor: affiliate.buttonColor || '#0043f7' }}
         >
           {isLoading ? (
             <Loader size="xs" />

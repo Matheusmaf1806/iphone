@@ -170,7 +170,7 @@ export default function AppleUniverseCarousel({ startingPrices = {} }) {
                   </span>
                   <span>
                     <b className="block text-sm font-semibold text-gray-900">Precisa de ajuda?</b>
-                    <span className="text-sm font-medium text-brand-primary group-hover:opacity-60 transition-opacity">
+                    <span className="text-sm font-medium text-brand-yellow group-hover:opacity-60 transition-opacity">
                       Fale com nossos especialistas ›
                     </span>
                   </span>
@@ -183,7 +183,7 @@ export default function AppleUniverseCarousel({ startingPrices = {} }) {
                   </span>
                   <span>
                     <b className="block text-sm font-semibold text-gray-900">Conheça nosso perfil no Instagram</b>
-                    <span className="text-sm font-medium text-brand-primary group-hover:opacity-60 transition-opacity">
+                    <span className="text-sm font-medium text-brand-yellow group-hover:opacity-60 transition-opacity">
                       @{affiliate.instagram.replace(/^@/, '')}
                     </span>
                   </span>

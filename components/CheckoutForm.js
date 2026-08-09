@@ -704,10 +704,12 @@ export default function CheckoutForm({ config, installmentFees = {} }) {
               <div className="flex flex-col items-center">
                 <div
                   className={`w-12 h-12 rounded-full flex items-center justify-center font-bold transition-all ${
-                    currentStep >= step.number
-                      ? ' text-black shadow-lg'
-                      : 'bg-gray-200 text-gray-500'
+                    currentStep >= step.number ? 'shadow-lg' : 'bg-gray-200 text-gray-500'
                   }`}
+                  style={currentStep >= step.number ? {
+                    backgroundColor: affiliate.buttonColor || '#0043f7',
+                    color: affiliate.buttonTextColor || '#ffffff',
+                  } : undefined}
                 >
                   <i className={`fas ${step.icon}`}></i>
                 </div>
@@ -721,9 +723,8 @@ export default function CheckoutForm({ config, installmentFees = {} }) {
               </div>
               {index < steps.length - 1 && (
                 <div
-                  className={`w-16 md:w-32 h-1 mx-2 transition-all ${
-                    currentStep > step.number ? '' : 'bg-gray-200'
-                  }`}
+                  className="w-16 md:w-32 h-1 mx-2 transition-all"
+                  style={{ backgroundColor: currentStep > step.number ? (affiliate.buttonColor || '#0043f7') : '#e5e7eb' }}
                 ></div>
               )}
             </div>
@@ -1260,7 +1261,7 @@ export default function CheckoutForm({ config, installmentFees = {} }) {
                   <button
                     type="button"
                     onClick={handleNextStep}
-                    className="flex-1 bg-black font-bold py-4 rounded-xl hover:bg-gray-800 transition-colors"
+                    className="flex-1 bg-brand-dark font-bold py-4 rounded-xl hover:opacity-90 transition-colors"
                     style={{ color: affiliate.buttonColor || '#0043f7' }}
                   >
                     Continuar
