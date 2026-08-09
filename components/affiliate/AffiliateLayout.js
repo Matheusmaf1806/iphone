@@ -117,7 +117,7 @@ export default function AffiliateLayout({ children, session }) {
                 />
               ) : (
                 <div className="w-10 h-10 bg-gradient-to-br from-brand-yellow to-yellow-400 rounded-full flex items-center justify-center font-bold text-gray-900">
-                  {session.fullName.charAt(0).toUpperCase()}
+                  {(session.fullName || '?').charAt(0).toUpperCase()}
                 </div>
               )}
               <div className="flex-1 min-w-0">
