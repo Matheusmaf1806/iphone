@@ -20,6 +20,11 @@
  *      (fica ~/watch-import/SE 3, ~/watch-import/Series 11, ~/watch-import/Ultra 3)
  *   3) Rode, na raiz do projeto (onde já existe o .env.local com as chaves do Supabase):
  *        node scripts/import-apple-watch-variants.mjs ~/watch-import
+ *
+ * O script testa permissão de upload/escrita ANTES de mexer em qualquer produto. Se
+ * der erro logo no início dizendo que falta a service_role key, pega ela em Supabase
+ * Dashboard > Project Settings > API > "service_role" (secreta, não é a "anon public"),
+ * adiciona no .env.local como SUPABASE_SERVICE_ROLE_KEY=... e roda de novo.
  */
 
 import fs from 'fs';
@@ -67,6 +72,38 @@ if (!baseDir) {
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const usingServiceRole = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// Testa upload + escrita na tabela ANTES de criar qualquer produto — se a chave usada
+// não tiver permissão (bucket de storage costuma exigir a service role, não a anon key),
+// é melhor descobrir isso em 1 segundo do que no meio da importação dos 38 SKUs.
+async function preflightCheck() {
+  console.log(`Testando permissões (usando ${usingServiceRole ? 'SUPABASE_SERVICE_ROLE_KEY' : 'NEXT_PUBLIC_SUPABASE_ANON_KEY'})...`);
+
+  const testPath = `products/_import-preflight-check-${Date.now()}.txt`;
+  const { error: uploadErr } = await supabase.storage
+    .from('images')
+    .upload(testPath, Buffer.from('preflight check'), { contentType: 'text/plain' });
+
+  if (uploadErr) {
+    console.error('\n❌ Falha ao testar upload no bucket "images":', uploadErr.message);
+    if (!usingServiceRole) {
+      console.error('   Você está usando a chave pública (NEXT_PUBLIC_SUPABASE_ANON_KEY).');
+      console.error('   Pega a "service_role key" em Supabase > Project Settings > API,');
+      console.error('   adiciona SUPABASE_SERVICE_ROLE_KEY=... no .env.local e roda de novo.');
+    }
+    process.exit(1);
+  }
+  await supabase.storage.from('images').remove([testPath]);
+
+  const { error: tableErr } = await supabase.from('products').select('id').limit(1);
+  if (tableErr) {
+    console.error('\n❌ Falha ao ler a tabela "products":', tableErr.message);
+    process.exit(1);
+  }
+
+  console.log('✅ Permissões OK — pode confiar no restante do import.\n');
+}
 
 // ---------------------------------------------------------------------------
 // Tabela manual pasta -> atributos, conferida uma a uma contra os nomes reais das
@@ -310,6 +347,7 @@ async function importLine(line) {
 }
 
 async function main() {
+  await preflightCheck();
   console.log(`Lendo pastas em: ${baseDir}`);
   for (const line of PRODUCT_LINES) {
     await importLine(line);
