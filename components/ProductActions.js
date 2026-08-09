@@ -173,12 +173,24 @@ export default function ProductActions({ product, onVariantChange }) {
       {hasSelectableVariants && (
         <div className="mb-6 space-y-5">
           {axisOptions.map((axis, axisIndex) => {
-            // Só mostra este eixo depois que todos os anteriores já foram escolhidos —
-            // é o que dá o efeito de "escolhe a cor, aí carregam as opções de
-            // armazenamento pra aquela cor", em vez de despejar tudo de uma vez.
+            // O eixo só fica interativo depois que os anteriores já foram escolhidos
+            // (é o que filtra as opções — ex: Pulseira só mostra as cores que existem
+            // pra aquela Cor de caixa já escolhida). Mas o passo continua VISÍVEL,
+            // só travado — sem isso, o cliente não sabe que existe mais coisa pra
+            // configurar além do primeiro eixo, e a página parece que só tem "Cor".
             const priorAxes = axisOptions.slice(0, axisIndex);
-            const priorAnswered = priorAxes.every(a => selectedAttributes[a.name] !== undefined);
-            if (!priorAnswered) return null;
+            const missingPriorAxis = priorAxes.find(a => selectedAttributes[a.name] === undefined);
+
+            if (missingPriorAxis) {
+              return (
+                <div key={axis.name} className="opacity-40 pointer-events-none select-none">
+                  <p className="text-sm font-semibold text-gray-500 mb-2">
+                    {axisIndex + 1}. {axis.name}
+                  </p>
+                  <p className="text-xs text-gray-400">Escolha {missingPriorAxis.name} primeiro</p>
+                </div>
+              );
+            }
 
             // Candidatas = variantes que já batem com tudo que foi escolhido até aqui.
             const candidateVariants = availableVariants.filter(v =>
