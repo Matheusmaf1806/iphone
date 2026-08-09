@@ -417,7 +417,7 @@ export default function ShoppingAssistant() {
                   )}
                   {combo.unavailableCategories.length > 0 && (
                     <p className="assist-result-note">
-                      Sem estoque no momento: {combo.unavailableCategories.map((d) => d.categoryLabel).join(', ')}.
+                      Sem produtos disponíveis agora em: {combo.unavailableCategories.map((d) => d.categoryLabel).join(', ')}.
                     </p>
                   )}
 

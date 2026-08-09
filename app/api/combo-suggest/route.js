@@ -63,38 +63,78 @@ export async function POST(request) {
     const installmentFees = await getInstallmentFees();
     const cardFeePercentage = getFeeForInstallments(installmentFees, maxInstallments);
 
-    const results = await Promise.all(
-      categories.map((slug) =>
-        supabase
-          .from('products')
-          .select('id, slug, name, image_url, cost_price, cost_currency, import_tax_percentage, supplier_margin_percentage, is_featured, rating')
-          .eq('category', slug)
-          .eq('is_active', true)
-          .gt('cost_price', 0)
-          .limit(200)
-      )
-    );
+    // Produtos são marcados com a categoria de duas formas diferentes no banco
+    // (category_slug em uns, category com o nome de exibição em outros — mesma
+    // inconsistência que /categoria/[slug]/page.js já trata) — por isso tenta
+    // primeiro por category_slug e, se não achar nada, cai pra category por nome.
+    const PRODUCT_COLUMNS = 'id, slug, name, image_url, price, cost_price, cost_currency, import_tax_percentage, supplier_margin_percentage, is_featured, rating';
+
+    const fetchCategoryRows = async (categorySlug) => {
+      const { data: bySlug, error: slugError } = await supabase
+        .from('products')
+        .select(PRODUCT_COLUMNS)
+        .eq('category_slug', categorySlug)
+        .eq('is_active', true)
+        .limit(200);
+
+      if (slugError) console.error('[combo-suggest] category_slug query error:', categorySlug, slugError);
+      if (bySlug && bySlug.length > 0) return bySlug;
+
+      const { data: byName, error: nameError } = await supabase
+        .from('products')
+        .select(PRODUCT_COLUMNS)
+        .ilike('category', CATEGORY_LABELS[categorySlug] || categorySlug)
+        .eq('is_active', true)
+        .limit(200);
+
+      if (nameError) console.error('[combo-suggest] category name query error:', categorySlug, nameError);
+      return byName || [];
+    };
+
+    const results = await Promise.all(categories.map(fetchCategoryRows));
 
     const categoryProducts = {};
     categories.forEach((slug, i) => {
-      const rows = results[i]?.data || [];
+      const rows = results[i] || [];
 
       const priced = rows
         .map((p) => {
           try {
-            const costPriceBRL = resolveCostPriceBRL({
-              costPrice: parseFloat(p.cost_price) || 0,
-              costCurrency: p.cost_currency,
-              importTaxPercentage: p.import_tax_percentage,
-              usdBrlRate: config.usdBrlRate,
-              defaultImportTaxPercentage: config.defaultImportTaxPercentage,
-            });
-            const prices = calculateAllPrices({
-              costPrice: costPriceBRL,
-              supplierMarginPercentage: parseFloat(p.supplier_margin_percentage) || 10,
-              affiliateMarginPercentage: affiliateMargin,
-              cardFeePercentage,
-            });
+            const costPrice = parseFloat(p.cost_price) || 0;
+
+            if (costPrice > 0) {
+              const costPriceBRL = resolveCostPriceBRL({
+                costPrice,
+                costCurrency: p.cost_currency,
+                importTaxPercentage: p.import_tax_percentage,
+                usdBrlRate: config.usdBrlRate,
+                defaultImportTaxPercentage: config.defaultImportTaxPercentage,
+              });
+              const prices = calculateAllPrices({
+                costPrice: costPriceBRL,
+                supplierMarginPercentage: parseFloat(p.supplier_margin_percentage) || 10,
+                affiliateMarginPercentage: affiliateMargin,
+                cardFeePercentage,
+              });
+
+              return {
+                id: p.id,
+                slug: p.slug,
+                name: p.name,
+                image_url: p.image_url,
+                isFeatured: !!p.is_featured,
+                rating: parseFloat(p.rating) || 0,
+                pixPrice: prices.pixPrice,
+                cardPrice: prices.finalPrice,
+              };
+            }
+
+            // Sem custo cadastrado (comum em produto com variantes que ainda não
+            // sincronizou, ou cadastro antigo) — mesmo fallback que a home e a
+            // página de categoria usam: mostra pelo preço de venda já salvo em
+            // vez de excluir o produto inteiro da sugestão.
+            const fallbackPrice = parseFloat(p.price) || 0;
+            if (fallbackPrice <= 0) return null;
 
             return {
               id: p.id,
@@ -103,8 +143,8 @@ export async function POST(request) {
               image_url: p.image_url,
               isFeatured: !!p.is_featured,
               rating: parseFloat(p.rating) || 0,
-              pixPrice: prices.pixPrice,
-              cardPrice: prices.finalPrice,
+              pixPrice: fallbackPrice,
+              cardPrice: fallbackPrice,
             };
           } catch (err) {
             console.error('[combo-suggest] price calc error for product:', p.id, err);
