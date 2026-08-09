@@ -40,7 +40,8 @@ export default function ProductGallery({ images = [] }) {
     <>
       <div className="w-full lg:sticky top-28 self-start fade-in-section">
         <div
-          className="main-image-container relative aspect-square bg-gradient-to-b from-gray-50 to-gray-100 border border-gray-200 rounded-2xl shadow-sm flex items-center justify-center p-8 md:p-12"
+          className="main-image-container group relative aspect-square border border-gray-200 rounded-2xl shadow-sm flex items-center justify-center p-8 md:p-12 overflow-hidden"
+          style={{ backgroundColor: '#FAFAFA' }}
           onClick={openLightbox}
         >
           <img
@@ -51,6 +52,32 @@ export default function ProductGallery({ images = [] }) {
           <span className="absolute bottom-4 right-4 w-9 h-9 rounded-full bg-white/90 shadow-md flex items-center justify-center text-gray-500">
             <i className="fas fa-magnifying-glass-plus text-sm"></i>
           </span>
+          {displayImages.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  prevImage();
+                }}
+                aria-label="Foto anterior"
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 shadow-md flex items-center justify-center text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-white"
+              >
+                <i className="fas fa-chevron-left text-sm"></i>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  nextImage();
+                }}
+                aria-label="Próxima foto"
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 shadow-md flex items-center justify-center text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-white"
+              >
+                <i className="fas fa-chevron-right text-sm"></i>
+              </button>
+            </>
+          )}
         </div>
         {displayImages.length > 1 && (
           <div className="thumbnail-container mt-4">
