@@ -703,7 +703,7 @@ export default function CheckoutForm({ config, installmentFees = {} }) {
             <div key={step.number} className="flex items-center">
               <div className="flex flex-col items-center">
                 <div
-                  className={`w-12 h-12 rounded-full flex items-center justify-center font-bold transition-all ${
+                  className={`w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-bold transition-all text-sm sm:text-base ${
                     currentStep >= step.number ? 'shadow-lg' : 'bg-gray-200 text-gray-500'
                   }`}
                   style={currentStep >= step.number ? {
@@ -714,7 +714,7 @@ export default function CheckoutForm({ config, installmentFees = {} }) {
                   <i className={`fas ${step.icon}`}></i>
                 </div>
                 <span
-                  className={`text-xs mt-2 font-medium ${
+                  className={`w-14 sm:w-auto text-center leading-tight text-[10px] sm:text-xs mt-2 font-medium ${
                     currentStep >= step.number ? 'text-gray-900' : 'text-gray-500'
                   }`}
                 >
@@ -723,7 +723,7 @@ export default function CheckoutForm({ config, installmentFees = {} }) {
               </div>
               {index < steps.length - 1 && (
                 <div
-                  className="w-16 md:w-32 h-1 mx-2 transition-all"
+                  className="w-6 sm:w-16 md:w-32 h-1 mx-1 sm:mx-2 transition-all flex-shrink-0"
                   style={{ backgroundColor: currentStep > step.number ? (affiliate.buttonColor || '#0043f7') : '#e5e7eb' }}
                 ></div>
               )}
@@ -931,12 +931,12 @@ export default function CheckoutForm({ config, installmentFees = {} }) {
                 )}
 
                 {/* Métodos de Pagamento */}
-                <div className="grid grid-cols-3 gap-3 mb-6">
+                <div className="grid grid-cols-3 gap-1.5 sm:gap-3 mb-6">
                   <button
                     type="button"
                     onClick={handlePixSelect}
                     disabled={isSubmitting}
-                    className={`p-4 border-2 rounded-xl transition-all text-center disabled:opacity-70 ${
+                    className={`p-2 sm:p-4 border-2 rounded-xl transition-all text-center disabled:opacity-70 ${
                       formData.paymentMethod === 'pix'
                         ? ''
                         : 'border-gray-200 hover:border-gray-300'
@@ -947,9 +947,9 @@ export default function CheckoutForm({ config, installmentFees = {} }) {
                     } : {}}
                   >
                     {isSubmitting && formData.paymentMethod === 'pix' ? (
-                      <i className="fas fa-spinner fa-spin text-2xl text-green-500 mb-2"></i>
+                      <i className="fas fa-spinner fa-spin text-lg sm:text-2xl text-green-500 mb-1 sm:mb-2"></i>
                     ) : (
-                      <i className="fas fa-qrcode text-2xl text-green-500 mb-2"></i>
+                      <i className="fas fa-qrcode text-lg sm:text-2xl text-green-500 mb-1 sm:mb-2"></i>
                     )}
                     <p className="font-bold text-gray-900 text-sm">PIX</p>
                     <p className="text-[10px] text-green-600 font-semibold">{config.pixDiscountPercentage}% OFF</p>
@@ -958,7 +958,7 @@ export default function CheckoutForm({ config, installmentFees = {} }) {
                   <button
                     type="button"
                     onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'paypal' }))}
-                    className={`p-4 border-2 rounded-xl transition-all text-center ${
+                    className={`p-2 sm:p-4 border-2 rounded-xl transition-all text-center ${
                       formData.paymentMethod === 'paypal'
                         ? ''
                         : 'border-gray-200 hover:border-gray-300'
@@ -968,7 +968,7 @@ export default function CheckoutForm({ config, installmentFees = {} }) {
                       backgroundColor: '#f0f7ff'
                     } : {}}
                   >
-                    <i className="fab fa-paypal text-2xl text-blue-600 mb-2"></i>
+                    <i className="fab fa-paypal text-lg sm:text-2xl text-blue-600 mb-1 sm:mb-2"></i>
                     <p className="font-bold text-gray-900 text-sm">PayPal</p>
                     <p className="text-[10px] text-gray-500">Rápido e seguro</p>
                   </button>
@@ -976,7 +976,7 @@ export default function CheckoutForm({ config, installmentFees = {} }) {
                   <button
                     type="button"
                     onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'credit-card' }))}
-                    className={`p-4 border-2 rounded-xl transition-all text-center ${
+                    className={`p-2 sm:p-4 border-2 rounded-xl transition-all text-center ${
                       formData.paymentMethod === 'credit-card'
                         ? ''
                         : 'border-gray-200 hover:border-gray-300'
@@ -986,7 +986,7 @@ export default function CheckoutForm({ config, installmentFees = {} }) {
                       backgroundColor: `${affiliate.buttonColor || '#0043f7'}15`
                     } : {}}
                   >
-                    <i className="fas fa-credit-card text-2xl mb-2" style={{ color: affiliate.buttonColor || '#0043f7' }}></i>
+                    <i className="fas fa-credit-card text-lg sm:text-2xl mb-1 sm:mb-2" style={{ color: affiliate.buttonColor || '#0043f7' }}></i>
                     <p className="font-bold text-gray-900 text-sm">Cartão</p>
                     <p className="text-[10px] text-gray-500">Até 21x s/ juros</p>
                   </button>

@@ -227,7 +227,7 @@ export default function ClientHeader({ config }) {
       {/* Modal de Login / Cadastro */}
       {showAuthModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={() => setShowAuthModal(false)}>
-          <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl animate-modal-in" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-modal-in" onClick={(e) => e.stopPropagation()}>
             {/* Header do modal */}
             <div className="relative px-6 pt-6 pb-4">
               <button
