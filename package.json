@@ -13,6 +13,7 @@
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.87.0",
     "bcryptjs": "^3.0.3",
+    "jszip": "^3.10.1",
     "next": "^14.2.0",
     "papaparse": "^5.5.3",
     "react": "^18.3.0",
