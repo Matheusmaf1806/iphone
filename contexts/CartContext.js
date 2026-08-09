@@ -40,6 +40,15 @@ export function CartProvider({ children }) {
   }, [cart]);
 
   const addToCart = (product, quantity = 1) => {
+    // Última trava antes de entrar no carrinho: produto com variação (cor,
+    // armazenamento, versão...) nunca pode ser adicionado sem um SKU resolvido —
+    // mesmo que algum componente novo esqueça de checar isso antes de chamar
+    // addToCart, o carrinho em si recusa.
+    if (product.hasVariants && !product.variantId) {
+      console.error('addToCart bloqueado: produto com variação sem variantId', product);
+      return;
+    }
+
     // Duas variantes do mesmo produto (ex: cores diferentes) precisam virar linhas
     // separadas no carrinho — a identidade da linha inclui o SKU quando existe.
     const lineId = product.variantId ? `${product.id}:${product.variantId}` : product.id;

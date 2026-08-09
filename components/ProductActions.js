@@ -32,24 +32,31 @@ export default function ProductActions({ product, onVariantChange }) {
   const affiliate = useAffiliate();
   const router = useRouter();
 
-  const hasVariants = !!(product.hasVariants && product.variants && product.variants.length > 0);
-  const axisOptions = useMemo(() => (hasVariants ? buildAxisOptions(product.variants) : []), [hasVariants, product.variants]);
+  // Importante: isVariantProduct olha só a flag do produto, não se sobrou alguma
+  // variante depois dos filtros de preço — um produto marcado como "tem variações"
+  // NUNCA pode cair no fluxo de compra simples, mesmo que hoje não haja nenhum SKU
+  // disponível pra vender (aí é "indisponível", não "compra sem escolher variante").
+  const isVariantProduct = !!product.hasVariants;
+  const availableVariants = product.variants || [];
+  const hasSelectableVariants = isVariantProduct && availableVariants.length > 0;
+
+  const axisOptions = useMemo(() => (isVariantProduct ? buildAxisOptions(availableVariants) : []), [isVariantProduct, availableVariants]);
 
   const initialAttributes = useMemo(() => {
-    if (!hasVariants) return {};
+    if (!hasSelectableVariants) return {};
     const preferred =
-      product.variants.find(v => v.isDefault) ||
-      product.variants.find(v => v.stockQuantity > 0) ||
-      product.variants[0];
+      availableVariants.find(v => v.isDefault) ||
+      availableVariants.find(v => v.stockQuantity > 0) ||
+      availableVariants[0];
     return preferred?.attributes || {};
-  }, [hasVariants, product.variants]);
+  }, [hasSelectableVariants, availableVariants]);
 
   const [selectedAttributes, setSelectedAttributes] = useState(initialAttributes);
 
-  const selectedVariant = hasVariants ? findMatchingVariant(product.variants, selectedAttributes) : null;
-  const incompleteSelection = hasVariants && !selectedVariant;
+  const selectedVariant = hasSelectableVariants ? findMatchingVariant(availableVariants, selectedAttributes) : null;
+  const incompleteSelection = isVariantProduct && !selectedVariant;
   const outOfStock = !!(selectedVariant && selectedVariant.stockQuantity <= 0);
-  const canAddToCart = hasVariants ? !!(selectedVariant && !outOfStock) : true;
+  const canAddToCart = isVariantProduct ? !!(selectedVariant && !outOfStock) : true;
 
   // Avisa o componente pai (a galeria de fotos) qual variante está selecionada, pra
   // trocar a foto principal quando o SKU escolhido tiver imagem própria.
@@ -68,13 +75,13 @@ export default function ProductActions({ product, onVariantChange }) {
     }
   };
 
-  const displayPrice = hasVariants ? (selectedVariant?.pixPrice ?? null) : product.pixPrice ?? product.price;
-  const displayCardPrice = hasVariants ? (selectedVariant?.cardPrice ?? null) : product.cardPrice;
+  const displayPrice = isVariantProduct ? (selectedVariant?.pixPrice ?? null) : product.pixPrice ?? product.price;
+  const displayCardPrice = isVariantProduct ? (selectedVariant?.cardPrice ?? null) : product.cardPrice;
   const hasPixDiscount = displayPrice != null && displayCardPrice != null && (displayCardPrice - displayPrice) > 0.01;
   const pixDiscountPercent = hasPixDiscount ? Math.round(((displayCardPrice - displayPrice) / displayCardPrice) * 100) : 0;
 
   const buildCartProduct = () => (
-    hasVariants
+    isVariantProduct
       ? {
           ...product,
           // O nome já sai com a combinação escolhida (ex: "iPhone 17 Pro Max — Titânio
@@ -115,7 +122,14 @@ export default function ProductActions({ product, onVariantChange }) {
 
   return (
     <>
-      {hasVariants && (
+      {isVariantProduct && !hasSelectableVariants && (
+        <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600">
+          <i className="fas fa-circle-exclamation mr-2 text-gray-400"></i>
+          Nenhuma opção disponível para este produto no momento.
+        </div>
+      )}
+
+      {hasSelectableVariants && (
         <div className="mb-6 space-y-4">
           {axisOptions.map(axis => {
             const isColorAxis = axis.values.some(v => product.variantSwatches?.[axis.name]?.[v]);
@@ -132,7 +146,7 @@ export default function ProductActions({ product, onVariantChange }) {
                   {axis.values.map(value => {
                     const isSelected = selectedAttributes[axis.name] === value;
                     const swatchHex = product.variantSwatches?.[axis.name]?.[value];
-                    const wouldMatch = findMatchingVariant(product.variants, { ...selectedAttributes, [axis.name]: value });
+                    const wouldMatch = findMatchingVariant(availableVariants, { ...selectedAttributes, [axis.name]: value });
                     const disabled = !wouldMatch;
                     const isSoldOut = wouldMatch && wouldMatch.stockQuantity <= 0;
 
@@ -188,7 +202,9 @@ export default function ProductActions({ product, onVariantChange }) {
       {/* Preço dinâmico */}
       <div className="mb-6">
         {incompleteSelection ? (
-          <p className="text-lg text-gray-500">Selecione as opções acima para ver o preço</p>
+          <p className="text-lg text-gray-500">
+            {hasSelectableVariants ? 'Selecione as opções acima para ver o preço' : 'Produto indisponível no momento'}
+          </p>
         ) : (
           <>
             {hasPixDiscount && (
@@ -275,7 +291,11 @@ export default function ProductActions({ product, onVariantChange }) {
               if (canAddToCart) e.currentTarget.style.backgroundColor = affiliate.buttonColor || '#0043f7';
             }}
           >
-            {outOfStock ? 'Esgotado' : incompleteSelection ? 'Escolha as opções' : 'Adicionar ao Carrinho'}
+            {outOfStock
+              ? 'Esgotado'
+              : incompleteSelection
+              ? (hasSelectableVariants ? 'Escolha as opções' : 'Indisponível')
+              : 'Adicionar ao Carrinho'}
           </button>
         </div>
       </div>

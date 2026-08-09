@@ -65,7 +65,7 @@ export async function POST(request) {
 
     const { data: products } = await supabase
       .from('products')
-      .select('id, name, cost_price, cost_currency, import_tax_percentage, supplier_margin_percentage, stock_type, stock_quantity')
+      .select('id, name, has_variants, cost_price, cost_currency, import_tax_percentage, supplier_margin_percentage, stock_type, stock_quantity')
       .in('id', productIds);
     const productMap = Object.fromEntries((products || []).map(p => [p.id, p]));
 
@@ -102,6 +102,13 @@ export async function POST(request) {
           }, { status: 400 });
         }
       } else {
+        // Produto com variação nunca pode ser vendido "às cegas" — sem isso, um
+        // request adulterado (sem passar pela seleção de cor/armazenamento na tela)
+        // conseguiria comprar usando o preço/estoque agregado do produto, sem
+        // nenhum SKU específico associado ao pedido.
+        if (product.has_variants) {
+          return NextResponse.json({ success: false, error: `Selecione uma variação (cor, armazenamento, etc.) para ${product.name}` }, { status: 400 });
+        }
         if (product.cost_price == null) {
           return NextResponse.json({ success: false, error: `${product.name} está sem preço configurado` }, { status: 400 });
         }

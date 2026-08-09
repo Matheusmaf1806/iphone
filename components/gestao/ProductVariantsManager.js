@@ -210,6 +210,19 @@ export default function ProductVariantsManager({ productId, productName, product
     }
 
     const combos = cartesianProduct(axisValuePairs);
+
+    // Produtos com muitos eixos (ex: Apple Watch = tamanho + material + conectividade
+    // + pulseira + cor da pulseira...) podem gerar centenas de combinações de uma vez.
+    // Avisa antes de despejar uma tabela gigante e impossível de revisar/preencher.
+    if (combos.length > 100) {
+      const proceed = confirm(
+        `Essa seleção gera ${combos.length} combinações de uma vez — isso costuma ficar difícil de revisar.\n\n` +
+        `Considere gerar por partes (ex: só um tamanho de caixa por vez) e repetir "Gerar combinações" depois.\n\n` +
+        `Gerar os ${combos.length} SKUs mesmo assim?`
+      );
+      if (!proceed) return;
+    }
+
     const existingKeys = new Set(rows.map(r => attributesKey(r.attributes)));
 
     const newRows = combos
@@ -455,10 +468,10 @@ export default function ProductVariantsManager({ productId, productName, product
                   type="text"
                   value={newValueDrafts[type.id]?.value || ''}
                   onChange={(e) => setNewValueDrafts(prev => ({ ...prev, [type.id]: { ...prev[type.id], value: e.target.value } }))}
-                  placeholder={type.name.toLowerCase() === 'cor' ? '+ Nova cor (ex: Titânio Verde)' : `+ Novo valor de ${type.name}`}
+                  placeholder={type.name.toLowerCase().includes('cor') ? '+ Nova cor (ex: Titânio Verde)' : `+ Novo valor de ${type.name}`}
                   className="flex-1 max-w-xs px-3 py-1.5 text-sm border rounded focus:ring-2 focus:ring-blue-500"
                 />
-                {type.name.toLowerCase() === 'cor' && (
+                {type.name.toLowerCase().includes('cor') && (
                   <input
                     type="color"
                     value={newValueDrafts[type.id]?.swatch_hex || '#888888'}

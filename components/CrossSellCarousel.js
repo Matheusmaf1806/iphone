@@ -17,7 +17,15 @@ export default function ComboSuggestion({ currentProduct, suggestedProduct }) {
   const suggestedPrice = suggestedProduct.displayPrice || suggestedProduct.pixPrice || suggestedProduct.price || 0;
   const comboTotal = currentPrice + suggestedPrice;
 
+  // Nenhum dos dois pode ir pro carrinho sem SKU definido — se qualquer um dos
+  // produtos tiver variação (cor, armazenamento, versão...), não dá pra adicionar
+  // "às cegas" com 1 clique aqui; o cliente precisa escolher a opção na página dele.
+  const currentHasVariants = !!currentProduct.hasVariants;
+  const suggestedHasVariants = !!suggestedProduct.hasVariants;
+  const canAddComboDirectly = !currentHasVariants && !suggestedHasVariants;
+
   const handleAddBoth = () => {
+    if (!canAddComboDirectly) return;
     addToCart({
       id: currentProduct.id,
       name: currentProduct.name,
@@ -108,16 +116,22 @@ export default function ComboSuggestion({ currentProduct, suggestedProduct }) {
             <p className="text-2xl font-bold" style={{ color: brandColor || '#0c0e0b' }}>
               R$ {comboTotal.toFixed(2).replace('.', ',')}
             </p>
-            <button
-              onClick={handleAddBoth}
-              className="mt-3 w-full md:w-auto px-6 py-2.5 rounded-lg text-white text-sm font-bold transition-all duration-200 hover:brightness-110 hover:shadow-md active:scale-[0.97]"
-              style={{ backgroundColor: brandColor || '#0c0e0b' }}
-            >
-              <svg className="w-4 h-4 inline-block mr-1.5 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-              </svg>
-              Adicionar os 2
-            </button>
+            {canAddComboDirectly ? (
+              <button
+                onClick={handleAddBoth}
+                className="mt-3 w-full md:w-auto px-6 py-2.5 rounded-lg text-white text-sm font-bold transition-all duration-200 hover:brightness-110 hover:shadow-md active:scale-[0.97]"
+                style={{ backgroundColor: brandColor || '#0c0e0b' }}
+              >
+                <svg className="w-4 h-4 inline-block mr-1.5 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+                Adicionar os 2
+              </button>
+            ) : (
+              <p className="mt-3 text-xs text-gray-500 max-w-[180px] md:ml-auto">
+                Escolha cor/armazenamento em cada produto pra montar o combo
+              </p>
+            )}
           </div>
         </div>
       </div>
