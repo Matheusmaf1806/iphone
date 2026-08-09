@@ -1,0 +1,324 @@
+#!/usr/bin/env node
+/**
+ * Importa os SKUs de Apple Watch SE 3 / Series 11 / Ultra 3 a partir das pastas de
+ * fotos extraídas dos zips que o Matheus mandou (cada zip = 1 produto, cada subpasta
+ * dentro dele = 1 combinação de cor/tamanho/pulseira, com até 3 fotos).
+ *
+ * NÃO precisa mexer no código do site nem reiniciar nada — o script fala direto com o
+ * Supabase (mesmas credenciais do .env.local do projeto) e sobe as fotos + cria os SKUs
+ * já com atributos certos. Depois é só abrir "Gerenciar Variantes" no admin de cada
+ * produto e preencher custo/margem/estoque por linha (o script não inventa preço).
+ *
+ * Como usar:
+ *   1) Rode a migration supabase/migrations/add_watch_2025_lineup_catalog.sql no SQL
+ *      Editor do Supabase (opcional, mas sem isso as cores não ganham "swatch" colorido).
+ *   2) Extraia os 3 zips numa mesma pasta, ex:
+ *        mkdir -p ~/watch-import
+ *        unzip -o "SE_3.zip"      -d ~/watch-import
+ *        unzip -o "Series_11.zip" -d ~/watch-import
+ *        unzip -o "Ultra_3.zip"   -d ~/watch-import
+ *      (fica ~/watch-import/SE 3, ~/watch-import/Series 11, ~/watch-import/Ultra 3)
+ *   3) Rode, na raiz do projeto (onde já existe o .env.local com as chaves do Supabase):
+ *        node scripts/import-apple-watch-variants.mjs ~/watch-import
+ */
+
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { createClient } from '@supabase/supabase-js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(__dirname, '..');
+
+// Carrega .env.local manualmente (sem depender do pacote dotenv) — só preenche
+// variáveis que ainda não estão setadas no ambiente.
+function loadEnvLocal() {
+  const envPath = path.join(repoRoot, '.env.local');
+  if (!fs.existsSync(envPath)) return;
+  const content = fs.readFileSync(envPath, 'utf8');
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eq = trimmed.indexOf('=');
+    if (eq === -1) continue;
+    const key = trimmed.slice(0, eq).trim();
+    let value = trimmed.slice(eq + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    if (process.env[key] === undefined) process.env[key] = value;
+  }
+}
+loadEnvLocal();
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  console.error('Faltam as variáveis NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY.');
+  console.error('Rode este script na raiz do projeto (onde tem o .env.local) ou exporte as variáveis antes.');
+  process.exit(1);
+}
+
+const baseDir = process.argv[2];
+if (!baseDir) {
+  console.error('Uso: node scripts/import-apple-watch-variants.mjs <pasta-com-as-3-pastas-extraidas>');
+  process.exit(1);
+}
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ---------------------------------------------------------------------------
+// Tabela manual pasta -> atributos, conferida uma a uma contra os nomes reais das
+// 38 pastas dos 3 zips (a nomenclatura não é 100% regular — ex: pulseira Estilo
+// Milanês repete a cor da caixa como "cor da pulseira" — por isso não dá pra confiar
+// num parser genérico, foi conferido item a item).
+// ---------------------------------------------------------------------------
+
+const PRODUCT_LINES = [
+  {
+    lineFolder: 'SE 3',
+    productName: 'Apple Watch SE 3',
+    slug: 'apple-watch-se-3',
+    entries: [
+      { folder: '40mm-Aluminio-GPS-Cellular-estelar-esportiva-estelar', tamanho: '40mm', material: 'Alumínio', conectividade: 'GPS + Cellular', cor: 'Estelar', tipoPulseira: 'Pulseira Esportiva', corPulseira: 'Estelar' },
+      { folder: '40mm-Aluminio-GPS-Cellular-meia-noite-esportiva-meia-noite', tamanho: '40mm', material: 'Alumínio', conectividade: 'GPS + Cellular', cor: 'Meia-noite', tipoPulseira: 'Pulseira Esportiva', corPulseira: 'Meia-noite' },
+      { folder: '40mm-Aluminio-GPS-estelar-esportiva-estelar', tamanho: '40mm', material: 'Alumínio', conectividade: 'GPS', cor: 'Estelar', tipoPulseira: 'Pulseira Esportiva', corPulseira: 'Estelar' },
+      { folder: '40mm-Aluminio-GPS-meia-noite-esportiva-meia-noite', tamanho: '40mm', material: 'Alumínio', conectividade: 'GPS', cor: 'Meia-noite', tipoPulseira: 'Pulseira Esportiva', corPulseira: 'Meia-noite' },
+      { folder: '44mm-Aluminio-GPS-Cellular-estelar-esportiva-estelar', tamanho: '44mm', material: 'Alumínio', conectividade: 'GPS + Cellular', cor: 'Estelar', tipoPulseira: 'Pulseira Esportiva', corPulseira: 'Estelar' },
+      { folder: '44mm-Aluminio-GPS-Cellular-meia-noite-esportiva-meia-noite', tamanho: '44mm', material: 'Alumínio', conectividade: 'GPS + Cellular', cor: 'Meia-noite', tipoPulseira: 'Pulseira Esportiva', corPulseira: 'Meia-noite' },
+      { folder: '44mm-Aluminio-GPS-estelar-esportiva-estelar', tamanho: '44mm', material: 'Alumínio', conectividade: 'GPS', cor: 'Estelar', tipoPulseira: 'Pulseira Esportiva', corPulseira: 'Estelar' },
+      { folder: '44mm-Aluminio-GPS-meia-noite-esportiva-meia-noite', tamanho: '44mm', material: 'Alumínio', conectividade: 'GPS', cor: 'Meia-noite', tipoPulseira: 'Pulseira Esportiva', corPulseira: 'Meia-noite' },
+    ],
+  },
+  {
+    lineFolder: 'Series 11',
+    productName: 'Apple Watch Series 11',
+    slug: 'apple-watch-series-11',
+    entries: [
+      { folder: '42mm-Aluminio-GPS-Cellular-cinza-espacial-esportiva-preta', tamanho: '42mm', material: 'Alumínio', conectividade: 'GPS + Cellular', cor: 'Cinza Espacial', tipoPulseira: 'Pulseira Esportiva', corPulseira: 'Preta' },
+      { folder: '42mm-Aluminio-GPS-Cellular-cor-de-ouro-rosa-esportiva-blush-clara', tamanho: '42mm', material: 'Alumínio', conectividade: 'GPS + Cellular', cor: 'Cor de Ouro Rosa', tipoPulseira: 'Pulseira Esportiva', corPulseira: 'Blush Clara' },
+      { folder: '42mm-Aluminio-GPS-Cellular-prateada-esportiva-roxo-nevoa', tamanho: '42mm', material: 'Alumínio', conectividade: 'GPS + Cellular', cor: 'Prateada', tipoPulseira: 'Pulseira Esportiva', corPulseira: 'Roxo Névoa' },
+      { folder: '42mm-Aluminio-GPS-Cellular-preta-brilhante-esportiva-preta', tamanho: '42mm', material: 'Alumínio', conectividade: 'GPS + Cellular', cor: 'Preta Brilhante', tipoPulseira: 'Pulseira Esportiva', corPulseira: 'Preta' },
+      { folder: '42mm-Aluminio-GPS-cinza-espacial-esportiva-preta', tamanho: '42mm', material: 'Alumínio', conectividade: 'GPS', cor: 'Cinza Espacial', tipoPulseira: 'Pulseira Esportiva', corPulseira: 'Preta' },
+      { folder: '42mm-Aluminio-GPS-cor-de-ouro-rosa-esportiva-blush-clara', tamanho: '42mm', material: 'Alumínio', conectividade: 'GPS', cor: 'Cor de Ouro Rosa', tipoPulseira: 'Pulseira Esportiva', corPulseira: 'Blush Clara' },
+      { folder: '42mm-Aluminio-GPS-prateada-esportiva-roxo-nevoa', tamanho: '42mm', material: 'Alumínio', conectividade: 'GPS', cor: 'Prateada', tipoPulseira: 'Pulseira Esportiva', corPulseira: 'Roxo Névoa' },
+      { folder: '42mm-Aluminio-GPS-preta-brilhante-esportiva-preta', tamanho: '42mm', material: 'Alumínio', conectividade: 'GPS', cor: 'Preta Brilhante', tipoPulseira: 'Pulseira Esportiva', corPulseira: 'Preta' },
+      { folder: '42mm-Titanio-GPS-Cellular-ardosia-ardosia-estilo-milanes', tamanho: '42mm', material: 'Titânio', conectividade: 'GPS + Cellular', cor: 'Ardósia', tipoPulseira: 'Estilo Milanês', corPulseira: 'Ardósia' },
+      { folder: '42mm-Titanio-GPS-Cellular-dourada-esportiva-blush-clara', tamanho: '42mm', material: 'Titânio', conectividade: 'GPS + Cellular', cor: 'Dourada', tipoPulseira: 'Pulseira Esportiva', corPulseira: 'Blush Clara' },
+      { folder: '42mm-Titanio-GPS-Cellular-natural-natural-estilo-milanes', tamanho: '42mm', material: 'Titânio', conectividade: 'GPS + Cellular', cor: 'Natural', tipoPulseira: 'Estilo Milanês', corPulseira: 'Natural' },
+      { folder: '46mm-Aluminio-GPS-Cellular-cinza-espacial-esportiva-preta', tamanho: '46mm', material: 'Alumínio', conectividade: 'GPS + Cellular', cor: 'Cinza Espacial', tipoPulseira: 'Pulseira Esportiva', corPulseira: 'Preta' },
+      { folder: '46mm-Aluminio-GPS-Cellular-cor-de-ouro-rosa-esportiva-blush-clara', tamanho: '46mm', material: 'Alumínio', conectividade: 'GPS + Cellular', cor: 'Cor de Ouro Rosa', tipoPulseira: 'Pulseira Esportiva', corPulseira: 'Blush Clara' },
+      { folder: '46mm-Aluminio-GPS-Cellular-prateada-esportiva-roxo-nevoa', tamanho: '46mm', material: 'Alumínio', conectividade: 'GPS + Cellular', cor: 'Prateada', tipoPulseira: 'Pulseira Esportiva', corPulseira: 'Roxo Névoa' },
+      { folder: '46mm-Aluminio-GPS-Cellular-preta-brilhante-esportiva-preta', tamanho: '46mm', material: 'Alumínio', conectividade: 'GPS + Cellular', cor: 'Preta Brilhante', tipoPulseira: 'Pulseira Esportiva', corPulseira: 'Preta' },
+      { folder: '46mm-Aluminio-GPS-cinza-espacial-esportiva-preta', tamanho: '46mm', material: 'Alumínio', conectividade: 'GPS', cor: 'Cinza Espacial', tipoPulseira: 'Pulseira Esportiva', corPulseira: 'Preta' },
+      { folder: '46mm-Aluminio-GPS-cor-de-ouro-rosa-esportiva-blush-clara', tamanho: '46mm', material: 'Alumínio', conectividade: 'GPS', cor: 'Cor de Ouro Rosa', tipoPulseira: 'Pulseira Esportiva', corPulseira: 'Blush Clara' },
+      { folder: '46mm-Aluminio-GPS-prateada-esportiva-roxo-nevoa', tamanho: '46mm', material: 'Alumínio', conectividade: 'GPS', cor: 'Prateada', tipoPulseira: 'Pulseira Esportiva', corPulseira: 'Roxo Névoa' },
+      { folder: '46mm-Aluminio-GPS-preta-brilhante-esportiva-preta', tamanho: '46mm', material: 'Alumínio', conectividade: 'GPS', cor: 'Preta Brilhante', tipoPulseira: 'Pulseira Esportiva', corPulseira: 'Preta' },
+      { folder: '46mm-Titanio-GPS-Cellular-ardosia-ardosia-estilo-milanes', tamanho: '46mm', material: 'Titânio', conectividade: 'GPS + Cellular', cor: 'Ardósia', tipoPulseira: 'Estilo Milanês', corPulseira: 'Ardósia' },
+      { folder: '46mm-Titanio-GPS-Cellular-dourada-dourada-estilo-milanes', tamanho: '46mm', material: 'Titânio', conectividade: 'GPS + Cellular', cor: 'Dourada', tipoPulseira: 'Estilo Milanês', corPulseira: 'Dourada' },
+      { folder: '46mm-Titanio-GPS-Cellular-natural-esportiva-cinza-pedra', tamanho: '46mm', material: 'Titânio', conectividade: 'GPS + Cellular', cor: 'Natural', tipoPulseira: 'Pulseira Esportiva', corPulseira: 'Cinza Pedra' },
+    ],
+  },
+  {
+    lineFolder: 'Ultra 3',
+    productName: 'Apple Watch Ultra 3',
+    slug: 'apple-watch-ultra-3',
+    entries: [
+      { folder: '49mm-Titanio-natural-Oceano-azul-ancora', tamanho: '49mm', material: 'Titânio', cor: 'Natural', tipoPulseira: 'Pulseira Oceano', corPulseira: 'Azul-Âncora' },
+      { folder: '49mm-Titanio-natural-loop-Alpina-azul-clara', tamanho: '49mm', material: 'Titânio', cor: 'Natural', tipoPulseira: 'Loop Alpina', corPulseira: 'Azul Clara' },
+      { folder: '49mm-Titanio-natural-loop-Trail-azul-azul-brilhante', tamanho: '49mm', material: 'Titânio', cor: 'Natural', tipoPulseira: 'Loop Trail', corPulseira: 'Azul / Azul Brilhante' },
+      { folder: '49mm-Titanio-natural-natural-estilo-milanes-de-titanio', tamanho: '49mm', material: 'Titânio', cor: 'Natural', tipoPulseira: 'Estilo Milanês de Titânio', corPulseira: 'Natural' },
+      { folder: '49mm-Titanio-preta-Oceano-preta', tamanho: '49mm', material: 'Titânio', cor: 'Preta', tipoPulseira: 'Pulseira Oceano', corPulseira: 'Preta' },
+      { folder: '49mm-Titanio-preta-loop-Alpina-preta', tamanho: '49mm', material: 'Titânio', cor: 'Preta', tipoPulseira: 'Loop Alpina', corPulseira: 'Preta' },
+      { folder: '49mm-Titanio-preta-loop-Trail-preta-carvao', tamanho: '49mm', material: 'Titânio', cor: 'Preta', tipoPulseira: 'Loop Trail', corPulseira: 'Preta-Carvão' },
+      { folder: '49mm-Titanio-preta-preta-estilo-milanes-de-titanio', tamanho: '49mm', material: 'Titânio', cor: 'Preta', tipoPulseira: 'Estilo Milanês de Titânio', corPulseira: 'Preta' },
+    ],
+  },
+];
+
+function slugifyToken(value) {
+  return String(value)
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^A-Za-z0-9]+/g, '')
+    .toUpperCase();
+}
+
+function buildSku(productSlug, entry) {
+  const bits = [entry.tamanho, entry.material, entry.conectividade, entry.cor, entry.tipoPulseira, entry.corPulseira]
+    .filter(Boolean)
+    .map(v => slugifyToken(v).slice(0, 6));
+  return `${slugifyToken(productSlug).slice(0, 10)}-${bits.join('-')}`;
+}
+
+function buildAttributes(entry) {
+  const attrs = { 'Tamanho da Caixa': entry.tamanho, 'Material da Caixa': entry.material };
+  if (entry.conectividade) attrs['Conectividade'] = entry.conectividade;
+  attrs['Cor'] = entry.cor;
+  attrs['Tipo de Pulseira'] = entry.tipoPulseira;
+  attrs['Cor da Pulseira'] = entry.corPulseira;
+  return attrs;
+}
+
+// Lista os arquivos de imagem de uma pasta, ignorando lixo do macOS (__MACOSX, ._*),
+// e coloca a foto "de frente" primeiro (fica a capa do SKU).
+function listImageFiles(dirPath) {
+  const files = fs.readdirSync(dirPath).filter(f => {
+    if (f.startsWith('.') || f.startsWith('__MACOSX')) return false;
+    return /\.(jpe?g|png|webp)$/i.test(f);
+  });
+  files.sort((a, b) => a.localeCompare(b));
+  const frenteIdx = files.findIndex(f => f.toLowerCase().includes('frente'));
+  if (frenteIdx > 0) {
+    const [frente] = files.splice(frenteIdx, 1);
+    files.unshift(frente);
+  }
+  return files.slice(0, 4); // o sistema aceita até 4 fotos por SKU
+}
+
+async function uploadImage(localPath, storagePath) {
+  const buffer = fs.readFileSync(localPath);
+  const ext = path.extname(localPath).toLowerCase();
+  const contentType = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
+
+  const { error } = await supabase.storage.from('images').upload(storagePath, buffer, {
+    contentType,
+    cacheControl: '3600',
+    upsert: true,
+  });
+  if (error) throw new Error(`Upload falhou (${storagePath}): ${error.message}`);
+
+  const { data } = supabase.storage.from('images').getPublicUrl(storagePath);
+  return data.publicUrl;
+}
+
+async function ensureProduct(line) {
+  const { data: existing, error: selectErr } = await supabase
+    .from('products')
+    .select('id')
+    .eq('slug', line.slug)
+    .maybeSingle();
+  if (selectErr) throw new Error(`Erro buscando produto ${line.slug}: ${selectErr.message}`);
+
+  if (existing) {
+    console.log(`  Produto "${line.productName}" já existe (id ${existing.id}) — reaproveitando.`);
+    return existing.id;
+  }
+
+  const { data: created, error: insertErr } = await supabase
+    .from('products')
+    .insert({
+      slug: line.slug,
+      name: line.productName,
+      category: 'apple-watch',
+      category_slug: 'apple-watch',
+      has_variants: true,
+      stock_type: 'limited',
+      is_active: true,
+      supplier_margin_percentage: 10,
+    })
+    .select('id')
+    .single();
+  if (insertErr) throw new Error(`Erro criando produto ${line.slug}: ${insertErr.message}`);
+
+  console.log(`  Produto "${line.productName}" criado (id ${created.id}).`);
+  return created.id;
+}
+
+async function importLine(line) {
+  console.log(`\n=== ${line.productName} ===`);
+  const lineDir = path.join(baseDir, line.lineFolder);
+  if (!fs.existsSync(lineDir)) {
+    console.error(`  Pasta não encontrada: ${lineDir} — pulando este produto.`);
+    return;
+  }
+
+  const productId = await ensureProduct(line);
+
+  const { data: existingVariants, error: existingErr } = await supabase
+    .from('product_variants')
+    .select('sku')
+    .eq('product_id', productId);
+  if (existingErr) throw new Error(existingErr.message);
+  const existingSkus = new Set((existingVariants || []).map(v => v.sku));
+
+  let firstImageUrl = null;
+  const rows = [];
+
+  for (const entry of line.entries) {
+    const folderPath = path.join(lineDir, entry.folder);
+    if (!fs.existsSync(folderPath)) {
+      console.warn(`  [aviso] pasta de fotos não encontrada, pulando: ${entry.folder}`);
+      continue;
+    }
+
+    const sku = buildSku(line.slug, entry);
+    if (existingSkus.has(sku)) {
+      console.log(`  SKU ${sku} já existe — pulando (apague a variante no admin se quiser reimportar).`);
+      continue;
+    }
+
+    const files = listImageFiles(folderPath);
+    if (files.length === 0) {
+      console.warn(`  [aviso] nenhuma foto válida em ${entry.folder}, pulando.`);
+      continue;
+    }
+
+    process.stdout.write(`  Subindo fotos: ${entry.folder} (${files.length}) ... `);
+    const imageUrls = [];
+    for (const file of files) {
+      const storagePath = `products/${line.slug}/${sku}/${file}`;
+      const url = await uploadImage(path.join(folderPath, file), storagePath);
+      imageUrls.push(url);
+    }
+    console.log('ok');
+
+    if (!firstImageUrl) firstImageUrl = imageUrls[0];
+
+    rows.push({
+      product_id: productId,
+      sku,
+      attributes: buildAttributes(entry),
+      image_url: imageUrls[0],
+      image_urls: imageUrls,
+      cost_price: null,
+      stock_quantity: 0,
+      is_active: true,
+    });
+  }
+
+  if (rows.length > 0) {
+    const { error: insertErr } = await supabase.from('product_variants').insert(rows);
+    if (insertErr) throw new Error(`Erro inserindo variantes de ${line.productName}: ${insertErr.message}`);
+    console.log(`  ${rows.length} SKU(s) criado(s).`);
+  } else {
+    console.log('  Nenhum SKU novo pra criar.');
+  }
+
+  // Atualiza a foto de capa do produto (mostrada nas listagens) se ainda não tiver uma.
+  if (firstImageUrl) {
+    const { data: current } = await supabase.from('products').select('image_url').eq('id', productId).single();
+    if (!current?.image_url) {
+      await supabase.from('products').update({ image_url: firstImageUrl }).eq('id', productId);
+    }
+  }
+
+  // has_variants + stock_type já são setados na criação do produto, mas garante de
+  // novo aqui caso o produto já existisse antes com esses campos diferentes.
+  await supabase.from('products').update({ has_variants: true, stock_type: 'limited' }).eq('id', productId);
+}
+
+async function main() {
+  console.log(`Lendo pastas em: ${baseDir}`);
+  for (const line of PRODUCT_LINES) {
+    await importLine(line);
+  }
+  console.log('\nPronto! Agora abre o admin -> Produtos -> cada Apple Watch -> "Gerenciar Variantes"');
+  console.log('e preenche custo/margem/estoque de cada SKU (o script não define preço).');
+}
+
+main().catch(err => {
+  console.error('\nErro no import:', err.message);
+  process.exit(1);
+});
