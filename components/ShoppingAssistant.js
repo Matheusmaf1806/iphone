@@ -82,20 +82,20 @@ const MAX_INSTALLMENTS = 21;
 
 const SparkleIcon = ({ className }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none">
-    <path
-      d="M12 2.5l1.8 5.2 5.2 1.8-5.2 1.8L12 17.5l-1.8-5.2-5.2-1.8 5.2-1.8L12 2.5z"
-      fill="currentColor"
-    />
-    <path
-      d="M19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2-2.2-.8 2.2-.8L19 15z"
-      fill="currentColor"
-    />
+    <path d="M12 2.5l1.8 5.2 5.2 1.8-5.2 1.8L12 17.5l-1.8-5.2-5.2-1.8 5.2-1.8L12 2.5z" fill="currentColor" />
+    <path d="M19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2-2.2-.8 2.2-.8L19 15z" fill="currentColor" />
   </svg>
 );
 
 const ArrowIcon = ({ className }) => (
   <svg className={className} viewBox="0 0 12 12">
-    <path d="M2 6h8M7 2l4 4-4 4" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M2 6h8M7 2l4 4-4 4" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const CheckIcon = ({ className }) => (
+  <svg className={className} viewBox="0 0 12 12">
+    <path d="M2 6l3 3 5-6" stroke="white" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
@@ -118,6 +118,7 @@ export default function ShoppingAssistant() {
   }, [budgetInput]);
 
   const stepNumber = { categories: 1, budget: 2, installments: 3 }[step] || null;
+  const sliderProgress = ((maxInstallments - MIN_INSTALLMENTS) / (MAX_INSTALLMENTS - MIN_INSTALLMENTS)) * 100;
 
   const toggleCategory = (slug) => {
     setSelectedCategories((prev) =>
@@ -202,10 +203,8 @@ export default function ShoppingAssistant() {
     <section className="assist-section">
       <div className="container mx-auto px-4">
         <div className="assist-card">
-          <div className="assist-glow" />
-
           <div className="assist-header">
-            <div className="assist-badge" style={{ color: brand }}>
+            <div className="assist-badge">
               <SparkleIcon className="assist-badge-icon" />
               ASSISTENTE DE COMPRA
             </div>
@@ -217,7 +216,7 @@ export default function ShoppingAssistant() {
           {stepNumber && (
             <div className="assist-progress">
               {[1, 2, 3].map((n) => (
-                <div key={n} className={`assist-dot ${n <= stepNumber ? 'active' : ''}`} style={n <= stepNumber ? { background: brand } : undefined} />
+                <div key={n} className={`assist-dot ${n <= stepNumber ? 'active' : ''}`} />
               ))}
             </div>
           )}
@@ -234,15 +233,14 @@ export default function ShoppingAssistant() {
                       type="button"
                       onClick={() => toggleCategory(cat.slug)}
                       className={`assist-chip ${active ? 'active' : ''}`}
-                      style={active ? { borderColor: brand, background: `color-mix(in srgb, ${brand} 8%, white)` } : undefined}
                     >
-                      <span className="assist-chip-icon" style={active ? { color: brand } : undefined}>{cat.icon}</span>
-                      <span className="assist-chip-label">{cat.label}</span>
                       {active && (
-                        <span className="assist-chip-check" style={{ background: brand }}>
-                          <svg viewBox="0 0 12 12"><path d="M2 6l3 3 5-6" stroke="white" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                        <span className="assist-chip-check">
+                          <CheckIcon className="assist-chip-check-icon" />
                         </span>
                       )}
+                      <span className="assist-chip-icon">{cat.icon}</span>
+                      <span className="assist-chip-label">{cat.label}</span>
                     </button>
                   );
                 })}
@@ -252,7 +250,6 @@ export default function ShoppingAssistant() {
                 onClick={goToBudget}
                 disabled={selectedCategories.length === 0}
                 className="assist-cta"
-                style={{ background: selectedCategories.length ? brand : '#d2d2d7' }}
               >
                 Continuar <ArrowIcon className="assist-cta-arrow" />
               </button>
@@ -271,7 +268,6 @@ export default function ShoppingAssistant() {
                       type="button"
                       onClick={() => setBudgetInput(String(v))}
                       className={`assist-budget-chip ${active ? 'active' : ''}`}
-                      style={active ? { borderColor: brand, background: brand, color: '#fff' } : undefined}
                     >
                       {formatCurrency(v)}
                     </button>
@@ -293,13 +289,7 @@ export default function ShoppingAssistant() {
               </div>
               <div className="assist-step-actions">
                 <button type="button" onClick={() => setStep('categories')} className="assist-back">Voltar</button>
-                <button
-                  type="button"
-                  onClick={goToInstallments}
-                  disabled={budgetValue <= 0}
-                  className="assist-cta"
-                  style={{ background: budgetValue > 0 ? brand : '#d2d2d7' }}
-                >
+                <button type="button" onClick={goToInstallments} disabled={budgetValue <= 0} className="assist-cta">
                   Continuar <ArrowIcon className="assist-cta-arrow" />
                 </button>
               </div>
@@ -309,9 +299,7 @@ export default function ShoppingAssistant() {
           {step === 'installments' && (
             <div className="assist-step">
               <p className="assist-question">Em quantas parcelas, no máximo?</p>
-              <div className="assist-installments-display" style={{ color: brand }}>
-                até {maxInstallments}x
-              </div>
+              <div className="assist-installments-display">até {maxInstallments}x</div>
               <input
                 type="range"
                 min={MIN_INSTALLMENTS}
@@ -319,7 +307,7 @@ export default function ShoppingAssistant() {
                 value={maxInstallments}
                 onChange={(e) => setMaxInstallments(parseInt(e.target.value, 10))}
                 className="assist-slider"
-                style={{ accentColor: brand }}
+                style={{ '--progress': `${sliderProgress}%` }}
               />
               <div className="assist-slider-labels">
                 <span>1x</span>
@@ -327,7 +315,7 @@ export default function ShoppingAssistant() {
               </div>
               <div className="assist-step-actions">
                 <button type="button" onClick={() => setStep('budget')} className="assist-back">Voltar</button>
-                <button type="button" onClick={buildCombo} className="assist-cta" style={{ background: brand }}>
+                <button type="button" onClick={buildCombo} className="assist-cta">
                   Montar meu combo <ArrowIcon className="assist-cta-arrow" />
                 </button>
               </div>
@@ -336,7 +324,7 @@ export default function ShoppingAssistant() {
 
           {step === 'loading' && (
             <div className="assist-loading">
-              <div className="assist-loading-orb" style={{ background: brand }}>
+              <div className="assist-loading-orb">
                 <SparkleIcon className="assist-loading-icon" />
               </div>
               <p>Montando o combo perfeito pro seu orçamento...</p>
@@ -353,7 +341,7 @@ export default function ShoppingAssistant() {
               )}
               <div className="assist-step-actions">
                 <button type="button" onClick={restart} className="assist-back">Começar de novo</button>
-                <button type="button" onClick={tryAgainWithMoreRoom} className="assist-cta" style={{ background: brand }}>
+                <button type="button" onClick={tryAgainWithMoreRoom} className="assist-cta">
                   Ajustar parcelamento <ArrowIcon className="assist-cta-arrow" />
                 </button>
               </div>
@@ -372,22 +360,29 @@ export default function ShoppingAssistant() {
                         <div className="assist-result-img-fallback" />
                       )}
                     </div>
-                    <span className="assist-result-cat">{item.categoryLabel}</span>
-                    <span className="assist-result-name">{item.name}</span>
-                    <span className="assist-result-price" style={{ color: brand }}>{formatCurrency(item.pixPrice)}</span>
+                    <div className="assist-result-info">
+                      <span className="assist-result-cat">{item.categoryLabel}</span>
+                      <span className="assist-result-name">{item.name}</span>
+                      <span className="assist-result-price">{formatCurrency(item.pixPrice)}</span>
+                    </div>
                   </a>
                 ))}
               </div>
 
               <div className="assist-result-summary">
-                <div className="assist-result-total">
-                  <span className="assist-result-total-label">Total do combo</span>
-                  <span className="assist-result-total-value">{formatCurrency(combo.totalCard)}</span>
+                <div className="assist-result-summary-main">
+                  <div>
+                    <span className="assist-result-total-label">Total do combo</span>
+                    <div className="assist-result-total-value">{formatCurrency(combo.totalCard)}</div>
+                    <div className="assist-result-pix">ou {formatCurrency(combo.totalPix)} no PIX</div>
+                  </div>
+                  <div className="assist-result-installment-box">
+                    <span className="assist-result-installment-label">cabe em</span>
+                    <div className="assist-result-installment-value">
+                      {combo.installmentsUsed}x de {formatCurrency(combo.installmentValue)}
+                    </div>
+                  </div>
                 </div>
-                <div className="assist-result-installment" style={{ color: brand }}>
-                  em até {combo.installmentsUsed}x de {formatCurrency(combo.installmentValue)} no cartão
-                </div>
-                <div className="assist-result-pix">ou {formatCurrency(combo.totalPix)} no PIX</div>
 
                 {combo.droppedForBudget.length > 0 && (
                   <p className="assist-result-note">
@@ -402,7 +397,7 @@ export default function ShoppingAssistant() {
 
                 <div className="assist-step-actions">
                   <button type="button" onClick={restart} className="assist-back">Refazer</button>
-                  <button type="button" onClick={handleAddAllToCart} className="assist-cta" style={{ background: brand }}>
+                  <button type="button" onClick={handleAddAllToCart} className="assist-cta">
                     {addedAll ? 'Adicionado ao carrinho!' : 'Adicionar tudo ao carrinho'}
                   </button>
                 </div>
@@ -426,64 +421,52 @@ export default function ShoppingAssistant() {
         .assist-card {
           position: relative;
           border-radius: 24px;
-          background: #0c0e0b;
-          color: #fff;
-          padding: 32px 20px;
-          overflow: hidden;
-          isolation: isolate;
+          background: #ffffff;
+          border: 1px solid #e5e5e7;
+          box-shadow: 0 20px 50px -30px rgba(0, 0, 0, 0.18);
+          padding: 28px 20px 32px;
         }
         @media (min-width: 768px) {
           .assist-card {
-            padding: 48px 56px;
-          }
-        }
-
-        .assist-glow {
-          position: absolute;
-          inset: -40%;
-          background: conic-gradient(from 0deg, #0043f7, #7c3aed, #ec4899, #0043f7);
-          opacity: 0.18;
-          filter: blur(60px);
-          animation: assistSpin 14s linear infinite;
-          z-index: -1;
-        }
-        @keyframes assistSpin {
-          to {
-            transform: rotate(360deg);
+            padding: 44px 48px 48px;
           }
         }
 
         .assist-header {
-          max-width: 640px;
+          max-width: 620px;
         }
 
         .assist-badge {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          font-size: 12.5px;
+          white-space: nowrap;
+          font-size: 12px;
           font-weight: 700;
-          letter-spacing: 0.06em;
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.14);
-          padding: 6px 12px;
+          letter-spacing: 0.05em;
+          color: ${brand};
+          background: color-mix(in srgb, ${brand} 9%, white);
+          border: 1px solid color-mix(in srgb, ${brand} 22%, white);
+          padding: 7px 14px;
           border-radius: 999px;
-          margin-bottom: 16px;
+          margin-bottom: 18px;
         }
         .assist-badge-icon {
-          width: 14px;
-          height: 14px;
+          width: 13px;
+          height: 13px;
+          flex-shrink: 0;
         }
 
         .assist-heading {
-          font-size: clamp(24px, 3.6vw, 36px);
+          font-size: clamp(24px, 3.4vw, 34px);
           font-weight: 600;
           letter-spacing: -0.02em;
-          line-height: 1.25;
+          line-height: 1.3;
           margin: 0 0 28px;
+          color: #0c0e0b;
         }
         .assist-heading span {
-          color: rgba(255, 255, 255, 0.55);
+          color: #6e6e73;
           font-weight: 500;
           display: block;
         }
@@ -494,16 +477,20 @@ export default function ShoppingAssistant() {
           margin-bottom: 24px;
         }
         .assist-dot {
-          width: 24px;
+          width: 26px;
           height: 4px;
           border-radius: 999px;
-          background: rgba(255, 255, 255, 0.15);
+          background: #e5e5e7;
           transition: background 0.3s ease;
+        }
+        .assist-dot.active {
+          background: ${brand};
         }
 
         .assist-question {
           font-size: 18px;
           font-weight: 600;
+          color: #0c0e0b;
           margin: 0 0 18px;
         }
 
@@ -511,7 +498,7 @@ export default function ShoppingAssistant() {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
           gap: 10px;
-          margin-bottom: 24px;
+          margin-bottom: 26px;
         }
         @media (min-width: 640px) {
           .assist-chip-grid {
@@ -525,29 +512,32 @@ export default function ShoppingAssistant() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          gap: 8px;
-          padding: 18px 10px;
+          gap: 10px;
+          padding: 22px 10px 18px;
           border-radius: 16px;
-          border: 1.5px solid rgba(255, 255, 255, 0.14);
-          background: rgba(255, 255, 255, 0.04);
-          color: #fff;
+          border: 1.5px solid #e5e5e7;
+          background: #fbfbfd;
+          color: #0c0e0b;
           cursor: pointer;
-          transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+          transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
         }
         .assist-chip:hover {
           transform: translateY(-2px);
+          border-color: #c7c7cc;
+          box-shadow: 0 10px 24px -16px rgba(0, 0, 0, 0.25);
         }
         .assist-chip.active {
-          color: #0c0e0b;
+          border-color: ${brand};
+          background: color-mix(in srgb, ${brand} 6%, white);
         }
 
         .assist-chip-icon {
-          width: 32px;
-          height: 32px;
-          color: #fff;
+          width: 34px;
+          height: 34px;
+          color: #0c0e0b;
         }
         .assist-chip.active .assist-chip-icon {
-          color: inherit;
+          color: ${brand};
         }
         .assist-chip-icon :global(svg) {
           width: 100%;
@@ -558,7 +548,7 @@ export default function ShoppingAssistant() {
         .assist-chip-icon :global(circle),
         .assist-chip-icon :global(line) {
           stroke: currentColor;
-          stroke-width: 1.6;
+          stroke-width: 1.4;
           fill: none;
           stroke-linecap: round;
           stroke-linejoin: round;
@@ -568,22 +558,20 @@ export default function ShoppingAssistant() {
           font-size: 13.5px;
           font-weight: 600;
         }
-        .assist-chip.active .assist-chip-label {
-          color: #0c0e0b;
-        }
 
         .assist-chip-check {
           position: absolute;
-          top: 8px;
-          right: 8px;
-          width: 18px;
-          height: 18px;
+          top: 10px;
+          right: 10px;
+          width: 19px;
+          height: 19px;
           border-radius: 999px;
+          background: ${brand};
           display: flex;
           align-items: center;
           justify-content: center;
         }
-        .assist-chip-check svg {
+        .assist-chip-check-icon {
           width: 10px;
           height: 10px;
         }
@@ -592,48 +580,58 @@ export default function ShoppingAssistant() {
           display: flex;
           flex-wrap: wrap;
           gap: 8px;
-          margin-bottom: 14px;
+          margin-bottom: 16px;
         }
         .assist-budget-chip {
-          padding: 10px 16px;
+          padding: 10px 18px;
           border-radius: 999px;
-          border: 1.5px solid rgba(255, 255, 255, 0.16);
-          background: transparent;
-          color: #fff;
+          border: 1.5px solid #e5e5e7;
+          background: #fff;
+          color: #0c0e0b;
           font-size: 14px;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s ease;
         }
         .assist-budget-chip:hover {
-          border-color: rgba(255, 255, 255, 0.4);
+          border-color: #c7c7cc;
+        }
+        .assist-budget-chip.active {
+          border-color: ${brand};
+          background: ${brand};
+          color: #fff;
         }
 
         .assist-input-wrap {
           display: flex;
           align-items: center;
           gap: 8px;
-          border: 1.5px solid rgba(255, 255, 255, 0.16);
+          border: 1.5px solid #e5e5e7;
           border-radius: 14px;
           padding: 4px 16px;
           max-width: 320px;
-          margin-bottom: 24px;
+          margin-bottom: 26px;
+          background: #fbfbfd;
+          transition: border-color 0.2s ease;
+        }
+        .assist-input-wrap:focus-within {
+          border-color: ${brand};
         }
         .assist-input-prefix {
           font-weight: 700;
-          color: rgba(255, 255, 255, 0.6);
+          color: #86868b;
         }
         .assist-input {
           flex: 1;
           background: transparent;
           border: none;
           outline: none;
-          color: #fff;
+          color: #0c0e0b;
           font-size: 16px;
           padding: 12px 0;
         }
         .assist-input::placeholder {
-          color: rgba(255, 255, 255, 0.4);
+          color: #a1a1a6;
         }
         .assist-input::-webkit-outer-spin-button,
         .assist-input::-webkit-inner-spin-button {
@@ -642,53 +640,92 @@ export default function ShoppingAssistant() {
         }
 
         .assist-installments-display {
-          font-size: 44px;
+          font-size: 46px;
           font-weight: 700;
           letter-spacing: -0.02em;
-          margin-bottom: 12px;
+          color: ${brand};
+          margin-bottom: 14px;
         }
 
         .assist-slider {
+          -webkit-appearance: none;
+          appearance: none;
           width: 100%;
+          height: 6px;
+          border-radius: 999px;
           margin-bottom: 8px;
+          background: linear-gradient(to right, ${brand} 0%, ${brand} var(--progress), #e5e5e7 var(--progress), #e5e5e7 100%);
+          outline: none;
+        }
+        .assist-slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 24px;
+          height: 24px;
+          border-radius: 999px;
+          background: #fff;
+          border: 3px solid ${brand};
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+          cursor: pointer;
+        }
+        .assist-slider::-moz-range-thumb {
+          width: 24px;
+          height: 24px;
+          border-radius: 999px;
+          background: #fff;
+          border: 3px solid ${brand};
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+          cursor: pointer;
+        }
+        .assist-slider::-moz-range-track {
+          height: 6px;
+          border-radius: 999px;
+          background: #e5e5e7;
+        }
+        .assist-slider::-moz-range-progress {
+          height: 6px;
+          border-radius: 999px;
+          background: ${brand};
         }
 
         .assist-slider-labels {
           display: flex;
           justify-content: space-between;
           font-size: 12.5px;
-          color: rgba(255, 255, 255, 0.5);
-          margin-bottom: 24px;
+          color: #86868b;
+          margin-bottom: 26px;
         }
 
         .assist-step-actions {
           display: flex;
           align-items: center;
-          gap: 16px;
+          gap: 18px;
         }
 
         .assist-back {
           background: none;
           border: none;
-          color: rgba(255, 255, 255, 0.6);
+          color: #6e6e73;
           font-size: 14px;
           font-weight: 600;
           cursor: pointer;
-          padding: 12px 4px;
+          padding: 13px 4px;
         }
         .assist-back:hover {
-          color: #fff;
+          color: #0c0e0b;
         }
 
         .assist-cta {
           display: inline-flex;
           align-items: center;
           gap: 8px;
+          white-space: nowrap;
           border: none;
           color: #fff;
+          background: ${brand};
           font-size: 14.5px;
           font-weight: 700;
-          padding: 13px 22px;
+          padding: 14px 24px;
           border-radius: 999px;
           cursor: pointer;
           transition: filter 0.2s ease, transform 0.15s ease;
@@ -700,6 +737,7 @@ export default function ShoppingAssistant() {
           transform: scale(0.97);
         }
         .assist-cta:disabled {
+          background: #d2d2d7;
           cursor: not-allowed;
         }
         .assist-cta-arrow {
@@ -712,13 +750,14 @@ export default function ShoppingAssistant() {
           flex-direction: column;
           align-items: center;
           text-align: center;
-          padding: 32px 0;
+          padding: 40px 0 24px;
           gap: 18px;
         }
         .assist-loading-orb {
           width: 56px;
           height: 56px;
           border-radius: 999px;
+          background: ${brand};
           display: flex;
           align-items: center;
           justify-content: center;
@@ -741,66 +780,66 @@ export default function ShoppingAssistant() {
         }
         .assist-loading p {
           font-size: 15px;
-          color: rgba(255, 255, 255, 0.75);
+          color: #6e6e73;
         }
 
         .assist-empty-msg {
           font-size: 15.5px;
-          color: rgba(255, 255, 255, 0.85);
+          color: #3a3a3c;
           margin-bottom: 14px;
           max-width: 480px;
         }
         .assist-cheapest-link {
           display: inline-block;
           font-size: 14px;
-          color: #fff;
+          color: ${brand};
+          font-weight: 600;
           text-decoration: underline;
-          margin-bottom: 24px;
+          margin-bottom: 26px;
         }
 
         .assist-result-items {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
-          gap: 10px;
+          gap: 12px;
           margin-bottom: 24px;
         }
         @media (min-width: 640px) {
           .assist-result-items {
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
           }
         }
 
         .assist-result-item {
           display: flex;
           flex-direction: column;
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: #fff;
+          border: 1px solid #e5e5e7;
           border-radius: 14px;
-          padding: 12px;
+          overflow: hidden;
           text-decoration: none;
-          color: #fff;
-          transition: transform 0.2s ease, background 0.2s ease;
+          color: #0c0e0b;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         .assist-result-item:hover {
           transform: translateY(-3px);
-          background: rgba(255, 255, 255, 0.1);
+          box-shadow: 0 14px 28px -18px rgba(0, 0, 0, 0.25);
         }
 
         .assist-result-img {
-          background: #fff;
-          border-radius: 10px;
+          background: #fbfbfd;
           aspect-ratio: 1;
           display: flex;
           align-items: center;
           justify-content: center;
           overflow: hidden;
-          margin-bottom: 10px;
+          border-bottom: 1px solid #f0f0f2;
         }
         .assist-result-img img {
           width: 100%;
           height: 100%;
           object-fit: contain;
-          padding: 8px;
+          padding: 10px;
         }
         .assist-result-img-fallback {
           width: 100%;
@@ -808,11 +847,18 @@ export default function ShoppingAssistant() {
           background: #e5e5e7;
         }
 
+        .assist-result-info {
+          display: flex;
+          flex-direction: column;
+          padding: 10px 12px 12px;
+          flex: 1;
+        }
+
         .assist-result-cat {
-          font-size: 10.5px;
+          font-size: 10px;
           font-weight: 700;
           letter-spacing: 0.04em;
-          color: rgba(255, 255, 255, 0.5);
+          color: #86868b;
           text-transform: uppercase;
           margin-bottom: 2px;
         }
@@ -829,42 +875,66 @@ export default function ShoppingAssistant() {
         .assist-result-price {
           font-size: 14.5px;
           font-weight: 700;
+          color: ${brand};
           margin-top: auto;
         }
 
         .assist-result-summary {
-          border-top: 1px solid rgba(255, 255, 255, 0.12);
-          padding-top: 20px;
+          background: color-mix(in srgb, ${brand} 5%, white);
+          border: 1px solid color-mix(in srgb, ${brand} 14%, white);
+          border-radius: 18px;
+          padding: 22px;
         }
 
-        .assist-result-total {
+        .assist-result-summary-main {
           display: flex;
-          align-items: baseline;
-          gap: 10px;
-          margin-bottom: 4px;
+          flex-wrap: wrap;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          margin-bottom: 6px;
         }
+
         .assist-result-total-label {
-          font-size: 13.5px;
-          color: rgba(255, 255, 255, 0.6);
+          font-size: 13px;
+          color: #6e6e73;
+          font-weight: 600;
         }
         .assist-result-total-value {
-          font-size: 26px;
+          font-size: 30px;
           font-weight: 700;
-        }
-        .assist-result-installment {
-          font-size: 15px;
-          font-weight: 700;
-          margin-bottom: 2px;
+          color: #0c0e0b;
+          letter-spacing: -0.01em;
         }
         .assist-result-pix {
           font-size: 13px;
-          color: rgba(255, 255, 255, 0.5);
-          margin-bottom: 16px;
+          color: #6e6e73;
         }
+
+        .assist-result-installment-box {
+          text-align: right;
+        }
+        .assist-result-installment-label {
+          font-size: 12px;
+          font-weight: 700;
+          letter-spacing: 0.03em;
+          text-transform: uppercase;
+          color: #6e6e73;
+        }
+        .assist-result-installment-value {
+          font-size: 20px;
+          font-weight: 700;
+          color: ${brand};
+        }
+
         .assist-result-note {
           font-size: 12.5px;
-          color: rgba(255, 255, 255, 0.55);
-          margin-bottom: 12px;
+          color: #6e6e73;
+          margin: 10px 0 0;
+        }
+
+        .assist-result-summary .assist-step-actions {
+          margin-top: 18px;
         }
       `}</style>
     </section>
