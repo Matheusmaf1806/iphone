@@ -296,22 +296,33 @@ export default function ProductVariantsManager({ productId, productName, product
     setRows(prev => prev.map(r => ({ ...r, stock_quantity: bulkStock })));
   };
 
-  const handleImageUpload = async (key, file) => {
-    try {
-      const fd = new FormData();
-      fd.append('file', file);
-      fd.append('folder', 'products');
-      const res = await fetch('/api/upload', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (data.success) {
-        setRows(prev => prev.map(r => (
-          r._key === key ? { ...r, image_urls: [...(r.image_urls || []), data.url].slice(0, MAX_VARIANT_IMAGES) } : r
-        )));
-      } else {
-        alert(data.error || 'Erro ao enviar imagem');
+  // Aceita selecionar várias fotos de uma vez (até o limite que ainda cabe na linha) —
+  // sobe uma de cada vez, mas o usuário só precisa escolher o arquivo uma única vez em
+  // vez de clicar em "+" repetidamente pra cada foto.
+  const handleImageUpload = async (key, fileList) => {
+    const files = Array.from(fileList);
+    if (files.length === 0) return;
+
+    const currentCount = rows.find(r => r._key === key)?.image_urls?.length || 0;
+    const filesToUpload = files.slice(0, Math.max(0, MAX_VARIANT_IMAGES - currentCount));
+
+    for (const file of filesToUpload) {
+      try {
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('folder', 'products');
+        const res = await fetch('/api/upload', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.success) {
+          setRows(prev => prev.map(r => (
+            r._key === key ? { ...r, image_urls: [...(r.image_urls || []), data.url].slice(0, MAX_VARIANT_IMAGES) } : r
+          )));
+        } else {
+          alert(data.error || 'Erro ao enviar imagem');
+        }
+      } catch (err) {
+        alert('Erro ao enviar imagem');
       }
-    } catch (err) {
-      alert('Erro ao enviar imagem');
     }
   };
 
@@ -623,7 +634,7 @@ export default function ProductVariantsManager({ productId, productName, product
                             {(row.image_urls || []).length < MAX_VARIANT_IMAGES && (
                               <label className="w-8 h-8 rounded border border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-blue-400 hover:text-blue-500 cursor-pointer text-lg leading-none">
                                 +
-                                <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleImageUpload(row._key, e.target.files[0])} />
+                                <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => e.target.files?.length && handleImageUpload(row._key, e.target.files)} />
                               </label>
                             )}
                           </div>
