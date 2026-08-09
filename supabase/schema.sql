@@ -590,7 +590,6 @@ on conflict (key) do nothing;
 -- 18.1 installment_fees — taxa do cartão por número de parcelas (1 a 21x)
 -- Usada onde o número de parcelas já é conhecido (ex: assistente de compra da
 -- home). O resto do site continua usando o card_fee_percentage único acima.
--- Valores abaixo são fictícios (ver supabase/migrations/add_installment_fees.sql).
 -- =====================================================================
 
 create table if not exists installment_fees (
@@ -599,11 +598,11 @@ create table if not exists installment_fees (
 );
 
 insert into installment_fees (installments, fee_percentage) values
-  (1, 9.68), (2, 10.50), (3, 11.30), (4, 12.10), (5, 12.90),
-  (6, 13.70), (7, 14.60), (8, 15.50), (9, 16.40), (10, 17.30),
-  (11, 18.20), (12, 19.10), (13, 20.00), (14, 20.90), (15, 21.80),
-  (16, 22.70), (17, 23.60), (18, 24.50), (19, 25.40), (20, 26.30),
-  (21, 27.20)
+  (1, 7.60), (2, 10.39), (3, 11.60), (4, 12.84), (5, 14.10),
+  (6, 15.39), (7, 17.23), (8, 18.59), (9, 19.99), (10, 21.42),
+  (11, 22.88), (12, 24.38), (13, 26.70), (14, 28.29), (15, 29.92),
+  (16, 31.60), (17, 33.32), (18, 35.09), (19, 36.90), (20, 38.76),
+  (21, 40.68)
 on conflict (installments) do nothing;
 
 -- =====================================================================

@@ -80,8 +80,7 @@ export default function InstallmentFeesManager() {
         <h2 className="text-xl font-bold text-gray-900 mb-1">Taxa do cartão por parcela</h2>
         <p className="text-gray-600 text-sm">
           Usada pelo assistente de compra da home pra calcular o preço certo pro número de parcelas
-          que o cliente escolher. Os valores atuais são fictícios — troque pelos reais assim que o
-          gateway de pagamento novo for integrado.
+          que o cliente escolher. Atualize aqui sempre que a taxa do gateway de pagamento mudar.
         </p>
       </div>
 

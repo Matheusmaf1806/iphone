@@ -7,12 +7,12 @@
 -- número de parcelas), e o assistente de compra da home precisa calcular o preço
 -- exatamente pro número de parcelas que o cliente disse que consegue pagar.
 --
--- Os valores abaixo são FICTÍCIOS (mesma taxa de hoje em 1x, subindo daí pra
--- frente) — troque pelos valores reais assim que o gateway novo for integrado,
--- direto na tela Configurações (/gestao/erp/configuracoes), sem precisar mexer
--- em código. platform_config.card_fee_percentage continua existindo e sendo
--- usado normalmente no resto do site (produto, carrinho, checkout) — esta
--- tabela nova é usada apenas onde o número de parcelas já é conhecido.
+-- platform_config.card_fee_percentage continua existindo e sendo usado
+-- normalmente no resto do site (produto, carrinho, checkout) — esta tabela
+-- nova é usada apenas onde o número de parcelas já é conhecido.
+--
+-- Se essa migration já rodou antes com os valores fictícios iniciais, rode
+-- de novo — o "do update" abaixo substitui pelos valores reais.
 
 create table if not exists installment_fees (
   installments integer primary key check (installments between 1 and 21),
@@ -20,12 +20,12 @@ create table if not exists installment_fees (
 );
 
 insert into installment_fees (installments, fee_percentage) values
-  (1, 9.68), (2, 10.50), (3, 11.30), (4, 12.10), (5, 12.90),
-  (6, 13.70), (7, 14.60), (8, 15.50), (9, 16.40), (10, 17.30),
-  (11, 18.20), (12, 19.10), (13, 20.00), (14, 20.90), (15, 21.80),
-  (16, 22.70), (17, 23.60), (18, 24.50), (19, 25.40), (20, 26.30),
-  (21, 27.20)
-on conflict (installments) do nothing;
+  (1, 7.60), (2, 10.39), (3, 11.60), (4, 12.84), (5, 14.10),
+  (6, 15.39), (7, 17.23), (8, 18.59), (9, 19.99), (10, 21.42),
+  (11, 22.88), (12, 24.38), (13, 26.70), (14, 28.29), (15, 29.92),
+  (16, 31.60), (17, 33.32), (18, 35.09), (19, 36.90), (20, 38.76),
+  (21, 40.68)
+on conflict (installments) do update set fee_percentage = excluded.fee_percentage;
 
 alter table installment_fees enable row level security;
 drop policy if exists "Allow all" on installment_fees;
