@@ -397,7 +397,10 @@ export default function CartDrawer() {
                 <button
                   onClick={handleCheckout}
                   className="w-full font-bold py-3 rounded-lg hover:shadow-xl transition-all shadow-md flex items-center justify-center gap-2 text-sm"
-                  style={{ background: 'linear-gradient(to right, #0c0e0b, #1a2560)', color: affiliate.buttonColor || '#0043f7' }}
+                  style={{
+                    background: `linear-gradient(to right, ${affiliate.buttonColor || '#0043f7'}, ${affiliate.buttonHover || '#0036c6'})`,
+                    color: affiliate.buttonTextColor || '#ffffff',
+                  }}
                 >
                   <i className="fas fa-check-circle"></i>
                   Finalizar Compra
