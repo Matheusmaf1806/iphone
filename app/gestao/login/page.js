@@ -38,16 +38,6 @@ export default function LoginPage() {
             </a>
           </div>
         </div>
-
-        <div className="mt-4 text-center text-sm text-gray-600">
-          <p>Credenciais padrão:</p>
-          <p className="font-mono text-xs mt-1">
-            admin / admin123
-          </p>
-          <p className="text-xs text-red-600 mt-2">
-            ⚠️ Altere a senha após o primeiro login!
-          </p>
-        </div>
       </div>
     </div>
   );

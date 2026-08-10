@@ -271,6 +271,7 @@ export default function CsvImportModal({ onClose, onSave }) {
 
               {/* Results List */}
               <div className="border rounded-xl overflow-hidden">
+                <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 border-b">
                     <tr>
@@ -303,6 +304,7 @@ export default function CsvImportModal({ onClose, onSave }) {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             </div>
           )}
