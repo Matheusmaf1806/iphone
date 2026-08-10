@@ -79,18 +79,33 @@ export default function ComboSuggestion({ currentProduct, currentVariant, sugges
       <div className="bg-white border border-gray-200 rounded-2xl p-5 md:p-8 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center gap-6 md:gap-4">
           <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-4 md:gap-3 min-w-0">
-            {resolvedItems.map((resolved, index) => (
-              <div key={resolved.product.id} className="flex items-center gap-4 md:gap-3 min-w-0">
-                {index > 0 && (
-                  <div className="hidden sm:flex flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 items-center justify-center">
-                    <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
-                  </div>
-                )}
-                <ComboItem resolved={resolved} label={index === 0 ? 'Este produto' : 'Sugestão'} brandColor={brandColor} />
-              </div>
-            ))}
+            {resolvedItems.flatMap((resolved, index) => {
+              const item = (
+                <ComboItem
+                  key={resolved.product.id}
+                  resolved={resolved}
+                  label={index === 0 ? 'Este produto' : 'Sugestão'}
+                  brandColor={brandColor}
+                />
+              );
+              if (index === 0) return [item];
+              // Separador "+" como irmão direto no flex, com o mesmo gap dos dois
+              // lados — antes ficava dentro do mesmo wrapper do item seguinte, então
+              // mesmo com gap igual visualmente colava no card de trás em vez de
+              // ficar centralizado entre os dois (parecia "iPhone+AirPods" isolado
+              // em vez de "iPhone + AirPods + Watch" em cadeia).
+              const plus = (
+                <div
+                  key={`plus-${resolved.product.id}`}
+                  className="hidden sm:flex flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 items-center justify-center"
+                >
+                  <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                </div>
+              );
+              return [plus, item];
+            })}
           </div>
 
           <div className="hidden md:block w-px h-20 bg-gray-200 mx-1 flex-shrink-0" />

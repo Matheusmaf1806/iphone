@@ -117,8 +117,7 @@ export default async function Home() {
   const supabase = createServerClient();
 
   let iphoneProducts = [];
-  let ipadProducts = [];
-  let airpodsProducts = [];
+  let extraProducts = [];
   const startingPrices = {};
 
   if (supabase) {
@@ -137,12 +136,23 @@ export default async function Home() {
         CAROUSEL_CATEGORIES.map((slug) => [slug, priceProducts(categoryRowsBySlug[slug], affiliate, config)])
       );
 
-      // Carrossel de destaque só usa iPhone/iPad/AirPods — mostra os mais recentes/
+      // Carrossel de destaque usa iPhone (sozinho, seção própria) + iPad/AirPods/
+      // Apple Watch intercalados numa segunda seção única — mostra os mais recentes/
       // em destaque primeiro (mesma ordem já vinda da query), sem precisar do
       // catálogo inteiro na tela.
       iphoneProducts = pricedBySlug.iphone.slice(0, 12);
-      ipadProducts = pricedBySlug.ipad.slice(0, 8);
-      airpodsProducts = pricedBySlug.airpods.slice(0, 8);
+      const ipadProducts = pricedBySlug.ipad.slice(0, 8);
+      const airpodsProducts = pricedBySlug.airpods.slice(0, 8);
+      const watchProducts = pricedBySlug['apple-watch'].slice(0, 8);
+
+      // Intercala as 3 listas (1 de cada por vez) em vez de concatenar, pra quem
+      // rolar o carrossel ver a mistura logo de cara, não 8 iPads seguidos.
+      const maxLen = Math.max(ipadProducts.length, airpodsProducts.length, watchProducts.length);
+      for (let i = 0; i < maxLen; i++) {
+        if (ipadProducts[i]) extraProducts.push(ipadProducts[i]);
+        if (airpodsProducts[i]) extraProducts.push(airpodsProducts[i]);
+        if (watchProducts[i]) extraProducts.push(watchProducts[i]);
+      }
 
       // "A partir de" de cada categoria (pro carrossel "Todo o universo Apple") — o
       // mais barato entre TODOS os produtos precificados daquela categoria, não só
@@ -172,25 +182,18 @@ export default async function Home() {
         )}
 
         <CategoriesSection />
+        <PromoBanner />
         <ShoppingAssistant />
 
-        {(ipadProducts.length > 0 || airpodsProducts.length > 0) && (
+        {extraProducts.length > 0 && (
           <section className="py-10 md:py-14 bg-gray-50">
             <div className="container mx-auto px-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-10">
-                {ipadProducts.length > 0 && (
-                  <FeaturedProducts products={ipadProducts} title="iPad" compact />
-                )}
-                {airpodsProducts.length > 0 && (
-                  <FeaturedProducts products={airpodsProducts} title="AirPods" compact />
-                )}
-              </div>
+              <FeaturedProducts products={extraProducts} title="iPad, AirPods e Apple Watch" compact />
             </div>
           </section>
         )}
 
         <TestimonialsSection />
-        <PromoBanner />
       </main>
 
       <Footer />
