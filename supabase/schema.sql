@@ -818,10 +818,12 @@ join (values
 on conflict (variant_type_id, value) do nothing;
 
 -- Catálogo de atributos pra MacBook (Neo/Air/Pro) e iPad (base/mini/Air/Pro) — ver
--- migrations/add_mac_ipad_catalog.sql (esse arquivo só espelha os TIPOS/VALORES de
--- atributo; os produtos/SKUs em si não são semeados aqui, são inseridos pela migration)
+-- migrations/add_mac_ipad_catalog.sql e add_mac_ipad_catalog_v2.sql (esses arquivos
+-- só espelham os TIPOS/VALORES de atributo; os produtos/SKUs em si não são semeados
+-- aqui, são inseridos pelas migrations)
 insert into product_variant_types (name, is_active, display_order) values
-  ('Memória', true, 11)
+  ('Memória', true, 11),
+  ('Acabamento da Tela', true, 12)
 on conflict (name) do nothing;
 
 insert into product_variant_values (variant_type_id, value, display_order)
@@ -839,7 +841,9 @@ join (values
   ('Memória', '64GB', 7),
   ('Memória', '128GB', 8),
   ('Conectividade', 'Wi-Fi', 3),
-  ('Conectividade', 'Wi-Fi + Cellular', 4)
+  ('Conectividade', 'Wi-Fi + Cellular', 4),
+  ('Acabamento da Tela', 'Padrão', 1),
+  ('Acabamento da Tela', 'Nano-textura', 2)
 ) as v(type_name, value, display_order) on v.type_name = t.name
 on conflict (variant_type_id, value) do nothing;
 
