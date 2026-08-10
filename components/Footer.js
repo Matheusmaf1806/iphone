@@ -10,7 +10,7 @@ export default function Footer() {
       <div className="container mx-auto py-12 px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
           <div>
-            <Logo src={affiliate.logo} name={affiliate.name} imgClassName="h-12 mb-4" textClassName="text-2xl font-bold tracking-tight text-gray-900 block mb-4" />
+            <Logo src={affiliate.logo} name={affiliate.name} imgClassName="h-12 mb-4" textClassName="text-2xl font-bold tracking-tight text-gray-900 block mb-4" fallbackImage={false} />
             <p className="text-gray-600 text-sm">
               iPhone e produtos Apple parcelados em reais, com retirada pessoal
               em Orlando na sua próxima viagem. Originais, lacrados e com nota fiscal americana.
