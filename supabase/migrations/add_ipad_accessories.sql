@@ -13,6 +13,25 @@
 create unique index if not exists ux_product_variants_product_sku
   on product_variants(product_id, sku);
 
+-- Tabela de vínculo "acessório compatível" (ver migrations/add_product_accessories.sql
+-- — repetida aqui, idempotente, pra este arquivo não depender de rodar aquele antes).
+create table if not exists product_accessories (
+  id uuid primary key default gen_random_uuid(),
+  product_id uuid not null references products(id) on delete cascade,
+  accessory_product_id uuid not null references products(id) on delete cascade,
+  is_default_checked boolean not null default false,
+  display_order integer not null default 0,
+  created_at timestamptz default now(),
+  unique (product_id, accessory_product_id),
+  check (product_id != accessory_product_id)
+);
+
+create index if not exists idx_product_accessories_product_id on product_accessories(product_id, display_order);
+
+alter table product_accessories enable row level security;
+drop policy if exists "Allow all" on product_accessories;
+create policy "Allow all" on product_accessories for all using (true) with check (true);
+
 -- =====================================================================
 -- Apple Pencil (USB-C)
 -- =====================================================================
