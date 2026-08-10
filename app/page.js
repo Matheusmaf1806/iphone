@@ -5,7 +5,7 @@ import ShoppingAssistant from '../components/ShoppingAssistant';
 import FeaturesBar from '../components/FeaturesBar';
 import CategoriesSection from '../components/CategoriesSection';
 import AppleUniverseCarousel from '../components/AppleUniverseCarousel';
-import MacBookLineupCarousel from '../components/MacBookLineupCarousel';
+import MacBookLineup from '../components/MacBookLineup';
 import FeaturedProducts from '../components/FeaturedProducts';
 import PromoBanner from '../components/PromoBanner';
 import TestimonialsSection from '../components/TestimonialsSection';
@@ -195,7 +195,7 @@ export default async function Home() {
         <CategoriesSection />
         <PromoBanner />
         <ShoppingAssistant />
-        <MacBookLineupCarousel startingPrices={macbookPrices} />
+        <MacBookLineup startingPrices={macbookPrices} />
 
         {extraProducts.length > 0 && (
           <section className="py-10 md:py-14 bg-gray-50">
