@@ -4,7 +4,6 @@ import Footer from '../../../components/Footer';
 import ProductPurchasePanel from '../../../components/ProductPurchasePanel';
 import ProductTabs from '../../../components/ProductTabs';
 import FeaturedProducts from '../../../components/FeaturedProducts';
-import ComboSuggestion from '../../../components/CrossSellCarousel';
 import { getProduct, getRelatedProducts, getCrossSellProducts } from '../../../lib/products';
 import { getCurrentContext } from '../../../lib/affiliateTracking';
 import { calculateAllPrices, resolveCostPriceBRL } from '../../../lib/pricing';
@@ -127,15 +126,7 @@ export default async function ProductPage({ params }) {
           <span className="text-gray-900 font-medium">{productWithPrices.name}</span>
         </div>
 
-        <ProductPurchasePanel product={productWithPrices} />
-
-        {/* Cross-sell inteligente - Combo sugestão */}
-        {crossSellProducts.length > 0 && (
-          <ComboSuggestion
-            currentProduct={productWithPrices}
-            suggestedProducts={crossSellProducts}
-          />
-        )}
+        <ProductPurchasePanel product={productWithPrices} suggestedProducts={crossSellProducts} />
 
         {/* Tabs de Descrição e Avaliações */}
         <ProductTabs product={productWithPrices} />

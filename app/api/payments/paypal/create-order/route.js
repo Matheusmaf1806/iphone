@@ -4,6 +4,8 @@ import { createServerClient } from '../../../../../lib/supabase/server';
 import { getPlatformConfig } from '../../../../../lib/affiliateTracking';
 import { priceCartItems } from '../../../../../lib/orderPricing';
 import { getInstallmentFees, getFeeForInstallments } from '../../../../../lib/installmentFees';
+import { resolveServerCouponDiscount } from '../../../../../lib/coupons';
+import { getAffiliateSession } from '../../../../../lib/affiliateAuth';
 
 const getPayPalBaseUrl = () =>
   process.env.PAYPAL_ENVIRONMENT === 'production'
@@ -76,6 +78,12 @@ export async function POST(request) {
       affiliate = affiliateData;
     }
 
+    // customMarkup só é honrado quando quem está logado é de fato um agente vinculado
+    // a ESSE afiliado — sem essa checagem, qualquer POST direto (sem passar pela UI)
+    // conseguiria definir a própria margem, inclusive negativa (vendendo abaixo do custo).
+    const session = getAffiliateSession();
+    const allowClientMarkup = !!(session && session.role === 'agent' && affiliateId && session.affiliateId === affiliateId);
+
     // A taxa do cartão varia por número de parcelas (installment_fees) — usa a taxa
     // exata do número de parcelas escolhido no checkout em vez da taxa fixa de
     // platform_config, senão o valor autorizado aqui não bate com o que o checkout
@@ -83,15 +91,26 @@ export async function POST(request) {
     const installmentFees = await getInstallmentFees();
     const cardFeePercentage = getFeeForInstallments(installmentFees, parseInt(installments, 10) || 1);
 
-    const priced = await priceCartItems({ supabase, items, affiliate, config, isPix: false, cardFeePercentageOverride: cardFeePercentage });
+    const priced = await priceCartItems({ supabase, items, affiliate, config, isPix: false, cardFeePercentageOverride: cardFeePercentage, allowClientMarkup });
     if (priced.error) {
       return NextResponse.json({ success: false, error: priced.error }, { status: 400 });
     }
 
-    let amount = priced.subtotal;
-    if (coupon?.discount_amount) {
-      amount -= coupon.discount_amount;
+    // Cupom revalidado inteiramente no servidor — o discount_amount que o cliente
+    // manda é só uma pista de qual cupom aplicar, nunca o valor usado de fato.
+    const couponResult = await resolveServerCouponDiscount({
+      supabase,
+      couponInput: coupon,
+      affiliateId: affiliate?.id || null,
+      orderSubtotal: priced.subtotal,
+      totalSupplierAmount: priced.totalSupplierAmount,
+      totalAffiliateAmount: priced.totalAffiliateAmount,
+    });
+    if (couponResult.error) {
+      return NextResponse.json({ success: false, error: couponResult.error }, { status: 400 });
     }
+
+    let amount = priced.subtotal - (couponResult.discountAmount || 0);
     amount = parseFloat(amount.toFixed(2));
 
     if (!amount || amount <= 0) {

@@ -4,11 +4,12 @@ import { useMemo, useState } from 'react';
 import ProductGallery from './ProductGallery';
 import ProductInfo from './ProductInfo';
 import ProductActions from './ProductActions';
+import ComboSuggestion from './CrossSellCarousel';
 
 // Liga a galeria de fotos ao seletor de variante: quando o SKU escolhido tem fotos
 // próprias (product_variants.image_urls, até 4), a galeria mostra só elas. Sem isso,
 // o cliente escolhe "Titânio Azul" e continua vendo a mesma foto genérica do produto.
-export default function ProductPurchasePanel({ product }) {
+export default function ProductPurchasePanel({ product, suggestedProducts }) {
   const [activeVariant, setActiveVariant] = useState(null);
 
   const galleryImages = useMemo(() => {
@@ -26,11 +27,24 @@ export default function ProductPurchasePanel({ product }) {
   }, [activeVariant, product.images, product.name]);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
-      <ProductGallery images={galleryImages} />
-      <ProductInfo product={product}>
-        <ProductActions product={product} onVariantChange={setActiveVariant} />
-      </ProductInfo>
-    </div>
+    <>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
+        <ProductGallery images={galleryImages} />
+        <ProductInfo product={product}>
+          <ProductActions product={product} onVariantChange={setActiveVariant} />
+        </ProductInfo>
+      </div>
+
+      {/* Cross-sell inteligente - Combo sugestão. Recebe a variante escolhida pelo
+          cliente acima (activeVariant) pra combinar com o SKU certo, não um padrão
+          qualquer. */}
+      {suggestedProducts?.length > 0 && (
+        <ComboSuggestion
+          currentProduct={product}
+          currentVariant={activeVariant}
+          suggestedProducts={suggestedProducts}
+        />
+      )}
+    </>
   );
 }

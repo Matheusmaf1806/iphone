@@ -281,7 +281,7 @@ export default function CheckoutForm({ config, installmentFees = {} }) {
             body: JSON.stringify({
               items: buildOrderItemsPayload(),
               affiliateId: affiliate?.affiliateId || affiliate?.id || null,
-              coupon: appliedCoupon ? { discount_amount: appliedCoupon.discount_amount } : null,
+              coupon: appliedCoupon ? { id: appliedCoupon.coupon.id, code: appliedCoupon.coupon.code } : null,
               installments: 1,
             }),
           });
@@ -308,7 +308,7 @@ export default function CheckoutForm({ config, installmentFees = {} }) {
   orderPayloadRef.current = {
     items: buildOrderItemsPayload(),
     affiliateId: affiliate?.affiliateId || affiliate?.id || null,
-    coupon: appliedCoupon ? { discount_amount: appliedCoupon.discount_amount } : null,
+    coupon: appliedCoupon ? { id: appliedCoupon.coupon.id, code: appliedCoupon.coupon.code } : null,
     installments,
   };
 

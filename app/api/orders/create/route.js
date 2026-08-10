@@ -2,9 +2,16 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from '../../../../lib/supabase/server';
 import { calculateAllPrices, resolveCostPriceBRL } from '../../../../lib/pricing';
 import { getPlatformConfig } from '../../../../lib/affiliateTracking';
-import { registerCouponUsage } from '../../../../lib/coupons';
+import { registerCouponUsage, resolveServerCouponDiscount } from '../../../../lib/coupons';
 import { getInstallmentFees, getFeeForInstallments } from '../../../../lib/installmentFees';
 import { updateStock, updateVariantStock } from '../../../../lib/products';
+import { getAffiliateSession } from '../../../../lib/affiliateAuth';
+
+// Mesma faixa segura usada em lib/orderPricing.js (ver comentário lá) — mantida
+// duplicada aqui porque esta rota ainda reimplementa a cascata de preço em vez de
+// chamar priceCartItems().
+const MIN_CLIENT_MARKUP = 0;
+const MAX_CLIENT_MARKUP = 90;
 
 export async function POST(request) {
   try {
@@ -51,6 +58,12 @@ export async function POST(request) {
       affiliate = affiliateData;
     }
 
+    // customMarkup só é honrado quando quem está logado é de fato um agente vinculado
+    // a ESSE afiliado — sem essa checagem, qualquer POST direto (sem passar pela UI)
+    // conseguiria definir a própria margem, inclusive negativa (vendendo abaixo do custo).
+    const session = getAffiliateSession();
+    const allowClientMarkup = !!(session && session.role === 'agent' && affiliateId && session.affiliateId === affiliateId);
+
     // A taxa do cartão varia por número de parcelas (installment_fees) — reflete o
     // custo real do gateway pra cada parcelamento, diferente da taxa única
     // (platform_config.card_fee_percentage) usada só como fallback/pra PIX. PIX não
@@ -93,6 +106,13 @@ export async function POST(request) {
     // Checar produto/variante válidos, custo configurado e estoque suficiente antes de
     // criar qualquer coisa no banco.
     for (const item of items) {
+      // Quantidade tem que ser um inteiro positivo — negativo/zero conseguiria
+      // reduzir o total cobrado e, no decremento de estoque, inverter o movimento
+      // "out" num aumento de estoque em vez de baixa.
+      if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
+        return NextResponse.json({ success: false, error: 'Quantidade inválida' }, { status: 400 });
+      }
+
       const product = productMap[item.productId];
       if (!product) {
         return NextResponse.json({ success: false, error: 'Produto não encontrado' }, { status: 400 });
@@ -153,10 +173,16 @@ export async function POST(request) {
       });
       const effectiveTaxPercentage = importTaxPercentage != null ? importTaxPercentage : config.defaultImportTaxPercentage;
 
-      // Use customMarkup from agent if provided, otherwise use affiliate commission or default
-      const affiliateMargin = (item.customMarkup !== null && item.customMarkup !== undefined)
-        ? item.customMarkup
-        : (affiliate?.commission_rate || config.defaultAffiliateMargin);
+      // customMarkup do agente só é usado quando allowClientMarkup validou a sessão
+      // acima — senão cai sempre na comissão real do afiliado ou no padrão da
+      // plataforma. Mesmo autorizado, é limitado a uma faixa segura: fora dela a
+      // fórmula pixPrice = netPrice / (1 - margem/100) vende abaixo do custo ou
+      // divide por zero/fica negativa.
+      const defaultMargin = affiliate?.commission_rate || config.defaultAffiliateMargin;
+      const hasClientMarkup = item.customMarkup !== null && item.customMarkup !== undefined && item.customMarkup !== '';
+      const affiliateMargin = (allowClientMarkup && hasClientMarkup)
+        ? Math.min(Math.max(parseFloat(item.customMarkup) || 0, MIN_CLIENT_MARKUP), MAX_CLIENT_MARKUP)
+        : defaultMargin;
 
       const prices = calculateAllPrices({
         costPrice,
@@ -206,8 +232,21 @@ export async function POST(request) {
       };
     });
 
-    // Aplicar desconto do cupom se houver
-    const couponDiscount = coupon ? coupon.discount_amount : 0;
+    // Cupom revalidado inteiramente no servidor — o discount_amount que o cliente
+    // manda é só uma pista de qual cupom aplicar, nunca o valor usado de fato (senão
+    // um request adulterado conseguiria mandar um desconto de qualquer tamanho).
+    const couponResult = await resolveServerCouponDiscount({
+      supabase,
+      couponInput: coupon,
+      affiliateId: affiliate?.id || null,
+      orderSubtotal,
+      totalSupplierAmount,
+      totalAffiliateAmount: totalAffiliateCommission,
+    });
+    if (couponResult.error) {
+      return NextResponse.json({ success: false, error: couponResult.error }, { status: 400 });
+    }
+    const couponDiscount = couponResult.discountAmount || 0;
     const subtotalAfterCoupon = orderSubtotal - couponDiscount;
 
     // Aplicar desconto PIX no subtotal se for o caso (após cupom)
@@ -270,16 +309,25 @@ export async function POST(request) {
       }, { status: 500 });
     }
 
-    // Baixar estoque (por SKU quando o item tem variante, senão no produto simples)
+    // Baixar estoque (por SKU quando o item tem variante, senão no produto simples).
+    // updateStock/updateVariantStock agora podem retornar success:false (estoque
+    // insuficiente ou alterado concorrentemente por outro pedido no meio do
+    // caminho) em vez de sempre "success:true" — o pedido já foi criado nesse ponto,
+    // então só registramos bem visível pro dono da loja conferir manualmente, sem
+    // tentar desfazer o pedido/pagamento já em andamento.
     for (const item of items) {
       try {
+        let stockResult;
         if (item.variantId) {
-          await updateVariantStock(item.variantId, item.quantity, 'out', `Pedido ${order.order_number}`);
+          stockResult = await updateVariantStock(item.variantId, item.quantity, 'out', `Pedido ${order.order_number}`);
         } else {
           const product = productMap[item.productId];
           if (product?.stock_type === 'limited' && product.stock_quantity !== -1) {
-            await updateStock(item.productId, item.quantity, 'out', `Pedido ${order.order_number}`);
+            stockResult = await updateStock(item.productId, item.quantity, 'out', `Pedido ${order.order_number}`);
           }
+        }
+        if (stockResult && !stockResult.success) {
+          console.error(`[ESTOQUE] Falha ao baixar estoque do pedido ${order.order_number} (item ${item.productId}/${item.variantId || 'sem variante'}): ${stockResult.error}`);
         }
       } catch (stockErr) {
         console.error('Error decrementing stock for order', order.id, stockErr);
@@ -325,9 +373,10 @@ export async function POST(request) {
       }
     }
 
-    // Registrar uso do cupom se houver
-    if (coupon && coupon.id) {
-      await registerCouponUsage(coupon.id, order.id, couponDiscount);
+    // Registrar uso do cupom se houver (usa o cupom revalidado no servidor, não o
+    // objeto vindo do cliente)
+    if (couponResult.coupon) {
+      await registerCouponUsage(couponResult.coupon.id, order.id, couponDiscount);
     }
 
     return NextResponse.json({
