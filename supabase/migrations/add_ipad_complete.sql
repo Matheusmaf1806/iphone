@@ -10,6 +10,36 @@
 --
 -- Rode o arquivo inteiro de uma vez no SQL Editor do Supabase.
 
+-- Alguma importação anterior (ex: Apple Watch) deixou SKUs duplicados pra um
+-- mesmo produto no banco, o que impede criar o índice único abaixo. Remove
+-- essas duplicatas primeiro: mantém a linha referenciada em pedidos/estoque
+-- (se houver), senão mantém a mais recentemente atualizada.
+with referenced as (
+  select distinct product_variant_id as id
+  from order_items
+  where product_variant_id is not null
+  union
+  select distinct product_variant_id as id
+  from stock_movements
+  where product_variant_id is not null
+),
+ranked as (
+  select
+    pv.id,
+    row_number() over (
+      partition by pv.product_id, pv.sku
+      order by
+        (r.id is not null) desc,
+        pv.updated_at desc nulls last,
+        pv.created_at desc nulls last,
+        pv.id
+    ) as rn
+  from product_variants pv
+  left join referenced r on r.id = pv.id
+  where pv.sku is not null
+) delete from product_variants pv using ranked
+where pv.id = ranked.id and ranked.rn > 1;
+
 create unique index if not exists ux_product_variants_product_sku
   on product_variants(product_id, sku);
 
