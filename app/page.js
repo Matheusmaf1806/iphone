@@ -5,6 +5,7 @@ import ShoppingAssistant from '../components/ShoppingAssistant';
 import FeaturesBar from '../components/FeaturesBar';
 import CategoriesSection from '../components/CategoriesSection';
 import AppleUniverseCarousel from '../components/AppleUniverseCarousel';
+import MacBookLineupCarousel from '../components/MacBookLineupCarousel';
 import FeaturedProducts from '../components/FeaturedProducts';
 import PromoBanner from '../components/PromoBanner';
 import TestimonialsSection from '../components/TestimonialsSection';
@@ -14,6 +15,7 @@ import { calculateAllPrices, resolveCostPriceBRL } from '../lib/pricing';
 import { computeVariantRollup } from '../lib/products';
 
 const CAROUSEL_CATEGORIES = ['iphone', 'mac', 'apple-watch', 'ipad', 'airpods', 'acessorios'];
+const MACBOOK_SLUGS = ['macbook-neo', 'macbook-air-m5', 'macbook-pro-m5'];
 
 const CATEGORY_LABELS = {
   iphone: 'iPhone',
@@ -119,6 +121,7 @@ export default async function Home() {
   let iphoneProducts = [];
   let extraProducts = [];
   const startingPrices = {};
+  const macbookPrices = {};
 
   if (supabase) {
     try {
@@ -161,6 +164,14 @@ export default async function Home() {
         const priced = pricedBySlug[slug].filter((p) => p.pixPrice > 0);
         startingPrices[slug] = priced.length > 0 ? Math.min(...priced.map((p) => p.pixPrice)) : null;
       });
+
+      // "A partir de" por produto específico (não por categoria) pro carrossel da
+      // linha de MacBook — cada card é um produto (Neo/Air/Pro), não a categoria
+      // "mac" inteira.
+      MACBOOK_SLUGS.forEach((slug) => {
+        const product = pricedBySlug.mac.find((p) => p.slug === slug);
+        macbookPrices[slug] = product?.pixPrice > 0 ? product.pixPrice : null;
+      });
     } catch (err) {
       console.error('[Home] Error fetching featured products:', err);
     }
@@ -184,6 +195,7 @@ export default async function Home() {
         <CategoriesSection />
         <PromoBanner />
         <ShoppingAssistant />
+        <MacBookLineupCarousel startingPrices={macbookPrices} />
 
         {extraProducts.length > 0 && (
           <section className="py-10 md:py-14 bg-gray-50">
