@@ -398,15 +398,15 @@ export default function ShoppingAssistant() {
                 <div className="assist-result-summary">
                   <div className="assist-result-summary-main">
                     <div>
-                      <span className="assist-result-total-label">Total do combo</span>
-                      <div className="assist-result-total-value">{formatCurrency(combo.totalCard)}</div>
-                      <div className="assist-result-pix">ou {formatCurrency(combo.totalPix)} no PIX</div>
+                      <span className="assist-result-total-label">No PIX</span>
+                      <div className="assist-result-total-value assist-result-pix-value">{formatCurrency(combo.totalPix)}</div>
                     </div>
                     <div className="assist-result-installment-box">
                       <span className="assist-result-installment-label">cabe em</span>
                       <div className="assist-result-installment-value">
                         {combo.installmentsUsed}x de {formatCurrency(combo.installmentValue)}
                       </div>
+                      <div className="assist-result-pix">Total: {formatCurrency(combo.totalCard)}</div>
                     </div>
                   </div>
 
@@ -980,6 +980,9 @@ export default function ShoppingAssistant() {
           color: #0c0e0b;
           letter-spacing: -0.01em;
         }
+        .assist-result-pix-value {
+          color: ${brand};
+        }
         .assist-result-pix {
           font-size: 12px;
           color: #6e6e73;
@@ -996,9 +999,10 @@ export default function ShoppingAssistant() {
           color: #6e6e73;
         }
         .assist-result-installment-value {
-          font-size: 16px;
+          font-size: 23px;
           font-weight: 700;
-          color: ${brand};
+          color: #0c0e0b;
+          letter-spacing: -0.01em;
         }
 
         .assist-result-note {
