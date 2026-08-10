@@ -333,6 +333,25 @@ create table if not exists product_variant_values (
 create index if not exists idx_product_variant_values_type_id on product_variant_values(variant_type_id, display_order);
 
 -- =====================================================================
+-- 8c. product_accessories — acessórios compatíveis curados manualmente pelo
+-- admin (ex: Apple Pencil Pro pro iPad Pro, mas não pro iPad base) — aparecem
+-- como checkbox de "adicionar junto" na página do produto principal.
+-- =====================================================================
+
+create table if not exists product_accessories (
+  id uuid primary key default gen_random_uuid(),
+  product_id uuid not null references products(id) on delete cascade,
+  accessory_product_id uuid not null references products(id) on delete cascade,
+  is_default_checked boolean not null default false,
+  display_order integer not null default 0,
+  created_at timestamptz default now(),
+  unique (product_id, accessory_product_id),
+  check (product_id != accessory_product_id)
+);
+
+create index if not exists idx_product_accessories_product_id on product_accessories(product_id, display_order);
+
+-- =====================================================================
 -- 9. stock_movements — histórico de entradas/saídas de estoque
 -- =====================================================================
 
@@ -798,6 +817,47 @@ join (values
 ) as v(type_name, value, swatch_hex, display_order) on v.type_name = t.name
 on conflict (variant_type_id, value) do nothing;
 
+-- Catálogo de atributos pra MacBook (Neo/Air/Pro) e iPad (base/mini/Air/Pro) — ver
+-- migrations/add_mac_ipad_catalog.sql e add_mac_ipad_catalog_v2.sql (esses arquivos
+-- só espelham os TIPOS/VALORES de atributo; os produtos/SKUs em si não são semeados
+-- aqui, são inseridos pelas migrations)
+insert into product_variant_types (name, is_active, display_order) values
+  ('Memória', true, 11),
+  ('Acabamento da Tela', true, 12)
+on conflict (name) do nothing;
+
+insert into product_variant_values (variant_type_id, value, display_order)
+select t.id, v.value, v.display_order
+from product_variant_types t
+join (values
+  ('Armazenamento', '4TB', 7),
+  ('Armazenamento', '8TB', 8),
+  ('Memória', '12GB', 1),
+  ('Memória', '16GB', 2),
+  ('Memória', '24GB', 3),
+  ('Memória', '32GB', 4),
+  ('Memória', '36GB', 5),
+  ('Memória', '48GB', 6),
+  ('Memória', '64GB', 7),
+  ('Memória', '128GB', 8),
+  ('Conectividade', 'Wi-Fi', 3),
+  ('Conectividade', 'Wi-Fi + Cellular', 4),
+  ('Acabamento da Tela', 'Padrão', 1),
+  ('Acabamento da Tela', 'Nano-textura', 2)
+) as v(type_name, value, display_order) on v.type_name = t.name
+on conflict (variant_type_id, value) do nothing;
+
+insert into product_variant_values (variant_type_id, value, swatch_hex, display_order)
+select t.id, v.value, v.swatch_hex, v.display_order
+from product_variant_types t
+join (values
+  ('Cor', 'Índigo', '#4B4C7A', 27),
+  ('Cor', 'Blush', '#E8C4C0', 28),
+  ('Cor', 'Citrino', '#F2C572', 29),
+  ('Cor', 'Preto Espacial', '#3B3B3D', 30)
+) as v(type_name, value, swatch_hex, display_order) on v.type_name = t.name
+on conflict (variant_type_id, value) do nothing;
+
 -- =====================================================================
 -- ROW LEVEL SECURITY — habilitar + policy permissiva em todas as tabelas
 -- (ver nota de segurança no topo do arquivo: a proteção real é feita
@@ -811,7 +871,7 @@ begin
   foreach t in array array[
     'admin_users', 'affiliates', 'affiliate_users', 'user_ecommerce',
     'products', 'product_images', 'product_details', 'product_variant_types',
-    'product_variants', 'product_variant_values', 'stock_movements',
+    'product_variants', 'product_variant_values', 'product_accessories', 'stock_movements',
     'affiliate_product_commissions', 'orders', 'order_items', 'payments',
     'coupons', 'coupon_usage', 'affiliate_sales', 'affiliate_withdrawals',
     'platform_config', 'installment_fees'

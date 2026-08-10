@@ -124,15 +124,13 @@ export default function TestimonialsSection() {
           <div className="flex justify-center gap-4 mt-6">
             <button
               onClick={prev}
-              className="bg-brand-dark w-10 h-10 rounded-full flex items-center justify-center hover:opacity-90 transition-all shadow-lg"
-              style={{ color: affiliate.buttonColor || '#0043f7' }}
+              className="bg-brand-dark text-white w-10 h-10 rounded-full flex items-center justify-center hover:opacity-90 transition-all shadow-lg"
             >
               <i className="fas fa-chevron-left"></i>
             </button>
             <button
               onClick={next}
-              className="bg-brand-dark w-10 h-10 rounded-full flex items-center justify-center hover:opacity-90 transition-all shadow-lg"
-              style={{ color: affiliate.buttonColor || '#0043f7' }}
+              className="bg-brand-dark text-white w-10 h-10 rounded-full flex items-center justify-center hover:opacity-90 transition-all shadow-lg"
             >
               <i className="fas fa-chevron-right"></i>
             </button>

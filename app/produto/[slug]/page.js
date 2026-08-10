@@ -92,6 +92,12 @@ export default async function ProductPage({ params }) {
 
   // Calcular preços do produto principal
   const productWithPrices = applyPrices(product, affiliate, config);
+  // Acessórios compatíveis (curados no admin) já vêm com preço aplicado, igual
+  // ao produto principal — senão o checkbox mostraria R$0,00.
+  productWithPrices.accessories = (product.accessories || []).map(a => ({
+    isDefaultChecked: a.isDefaultChecked,
+    product: applyPrices(a.product, affiliate, config),
+  }));
 
   // Buscar produtos relacionados e cross-sell em paralelo
   const [relatedRaw, crossSellRaw] = await Promise.all([

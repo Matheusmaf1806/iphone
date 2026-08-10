@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import ProductVariantsManager from './ProductVariantsManager';
+import ProductAccessoriesManager from './ProductAccessoriesManager';
 import Loader from '../Loader';
 import { resolveCostPriceBRL } from '../../lib/pricing';
 
@@ -11,6 +12,7 @@ export default function ProductModal({ product, onClose, onSave }) {
   const isEdit = !!product;
 
   const [showVariantsManager, setShowVariantsManager] = useState(false);
+  const [showAccessoriesManager, setShowAccessoriesManager] = useState(false);
 
   // Initialize images from product data
   const getInitialImages = () => {
@@ -1067,6 +1069,16 @@ export default function ProductModal({ product, onClose, onSave }) {
                   🔧 Gerenciar Variantes
                 </button>
               )}
+              {isEdit && (
+                <button
+                  type="button"
+                  onClick={() => setShowAccessoriesManager(true)}
+                  className="px-6 py-2.5 border-2 border-purple-500 text-purple-600 rounded-lg font-medium hover:bg-purple-50 transition-all"
+                  disabled={loading}
+                >
+                  🔌 Acessórios
+                </button>
+              )}
             </div>
             <button
               type="submit"
@@ -1094,6 +1106,15 @@ export default function ProductModal({ product, onClose, onSave }) {
           productSku={formData.sku}
           defaultMargin={formData.supplier_margin_percentage}
           onClose={() => setShowVariantsManager(false)}
+        />
+      )}
+
+      {/* Modal de Acessórios Compatíveis */}
+      {showAccessoriesManager && product?.id && (
+        <ProductAccessoriesManager
+          productId={product.id}
+          productName={formData.name}
+          onClose={() => setShowAccessoriesManager(false)}
         />
       )}
     </div>
