@@ -12,22 +12,25 @@ import { pickDefaultVariant } from '../lib/variantSelection';
  * combinação padrão já vem escolhida (a marcada como padrão, ou a primeira com
  * estoque) em vez de empilhar seletor de cada atributo no card.
  */
-export default function ComboSuggestion({ currentProduct, suggestedProducts }) {
+export default function ComboSuggestion({ currentProduct, currentVariant, suggestedProducts }) {
   const { brandColor } = useAffiliate();
   const { addToCart } = useCart();
 
   const resolvedItems = useMemo(() => {
     const list = [currentProduct, ...(suggestedProducts || [])].filter(Boolean);
-    return list.map(product => {
+    return list.map((product, index) => {
       if (!product.hasVariants) {
         const price = product.displayPrice ?? product.pixPrice ?? product.price ?? 0;
         return { product, variant: null, price, available: true };
       }
-      const variant = pickDefaultVariant(product.variants || []);
+      // Pro produto que o cliente já está vendo (primeiro item), usa a variante que
+      // ele escolheu na tela em vez de uma padrão qualquer — senão "Adicionar os N"
+      // pode colocar no carrinho uma cor/armazenamento diferente do que ele decidiu.
+      const variant = (index === 0 && currentVariant) ? currentVariant : pickDefaultVariant(product.variants || []);
       const available = !!(variant && variant.stockQuantity > 0);
       return { product, variant, price: variant?.pixPrice ?? 0, available };
     });
-  }, [currentProduct, suggestedProducts]);
+  }, [currentProduct, currentVariant, suggestedProducts]);
 
   if (resolvedItems.length < 2) return null;
 
@@ -56,10 +59,11 @@ export default function ComboSuggestion({ currentProduct, suggestedProducts }) {
           attributes: variant.attributes,
         });
       } else {
+        // Sem variação: manda o produto como veio (já carrega costPrice/costCurrency/
+        // importTaxPercentage/supplierMarginPercentage de applyPrices), mesmo padrão
+        // usado pelo caminho simples de ProductActions.buildCartProduct().
         addToCart({
-          id: product.id,
-          name: product.name,
-          slug: product.slug,
+          ...product,
           price,
           image: product.image_url || product.image,
           image_url: product.image_url || product.image,
