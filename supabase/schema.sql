@@ -798,6 +798,43 @@ join (values
 ) as v(type_name, value, swatch_hex, display_order) on v.type_name = t.name
 on conflict (variant_type_id, value) do nothing;
 
+-- Catálogo de atributos pra MacBook (Neo/Air/Pro) e iPad (base/mini/Air/Pro) — ver
+-- migrations/add_mac_ipad_catalog.sql (esse arquivo só espelha os TIPOS/VALORES de
+-- atributo; os produtos/SKUs em si não são semeados aqui, são inseridos pela migration)
+insert into product_variant_types (name, is_active, display_order) values
+  ('Memória', true, 11)
+on conflict (name) do nothing;
+
+insert into product_variant_values (variant_type_id, value, display_order)
+select t.id, v.value, v.display_order
+from product_variant_types t
+join (values
+  ('Armazenamento', '4TB', 7),
+  ('Armazenamento', '8TB', 8),
+  ('Memória', '12GB', 1),
+  ('Memória', '16GB', 2),
+  ('Memória', '24GB', 3),
+  ('Memória', '32GB', 4),
+  ('Memória', '36GB', 5),
+  ('Memória', '48GB', 6),
+  ('Memória', '64GB', 7),
+  ('Memória', '128GB', 8),
+  ('Conectividade', 'Wi-Fi', 3),
+  ('Conectividade', 'Wi-Fi + Cellular', 4)
+) as v(type_name, value, display_order) on v.type_name = t.name
+on conflict (variant_type_id, value) do nothing;
+
+insert into product_variant_values (variant_type_id, value, swatch_hex, display_order)
+select t.id, v.value, v.swatch_hex, v.display_order
+from product_variant_types t
+join (values
+  ('Cor', 'Índigo', '#4B4C7A', 27),
+  ('Cor', 'Blush', '#E8C4C0', 28),
+  ('Cor', 'Citrino', '#F2C572', 29),
+  ('Cor', 'Preto Espacial', '#3B3B3D', 30)
+) as v(type_name, value, swatch_hex, display_order) on v.type_name = t.name
+on conflict (variant_type_id, value) do nothing;
+
 -- =====================================================================
 -- ROW LEVEL SECURITY — habilitar + policy permissiva em todas as tabelas
 -- (ver nota de segurança no topo do arquivo: a proteção real é feita
