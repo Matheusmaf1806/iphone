@@ -37,8 +37,8 @@ const MACBOOKS = [
 ];
 
 // Decide se o texto em cima dessa cor precisa ser claro ou escuro pra continuar
-// legível — a cor da marca vem de cada afiliado (pode ser clara ou escura), então
-// não dá pra cravar "texto escuro" igual antes, quando a cor era fixa e clara.
+// legível — só usado pro selo "pra quem é" do Neo, que é a única área pintada
+// com a cor cheia da marca (o resto do card fica sempre num tom claro neutro).
 function isLightColor(hex) {
   const clean = (hex || '').replace('#', '');
   const full = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean;
@@ -53,14 +53,37 @@ function isLightColor(hex) {
 export default function MacBookLineup({ startingPrices = {} }) {
   const { brandColor } = useAffiliate();
   const brand = brandColor || '#0043f7';
-  const neoNeedsLightText = !isLightColor(brand);
+  const pillTextOnBrand = isLightColor(brand) ? '#1d1d1f' : '#ffffff';
 
-  // O card do Neo usa a cor da marca do afiliado no degradê — cada loja
-  // white-label vê a cor dela ali, em vez de uma cor fixa cravada no código.
-  const CARD_BG = {
-    colorful: `radial-gradient(circle at 15% 0%, ${brand} 0%, color-mix(in srgb, ${brand} 40%, white) 35%, #f5f5f7 70%)`,
-    light: '#f5f5f7',
-    dark: 'radial-gradient(circle at 30% 0%, #2c2c2e 0%, #000000 70%)',
+  // O card do Neo usa a cor da marca do afiliado só como um tom sutil no fundo
+  // (não a cor cheia — isso ficou saturado demais e brigava com a foto colorida
+  // dos notebooks) e cheia no selo "pra quem é", que é um respingo de cor
+  // controlado em vez de tomar o card inteiro.
+  const STYLE = {
+    colorful: {
+      dark: false,
+      bg: `radial-gradient(circle at 15% 0%, color-mix(in srgb, ${brand} 20%, white) 0%, #f5f5f7 55%)`,
+      border: '1px solid #ececee',
+      pillBg: brand,
+      pillText: pillTextOnBrand,
+      glow: `radial-gradient(ellipse, color-mix(in srgb, ${brand} 35%, transparent) 0%, transparent 72%)`,
+    },
+    light: {
+      dark: false,
+      bg: '#f5f5f7',
+      border: '1px solid #ececee',
+      pillBg: 'rgba(0,0,0,0.055)',
+      pillText: '#1d1d1f',
+      glow: 'radial-gradient(ellipse, rgba(0,0,0,0.1) 0%, transparent 72%)',
+    },
+    dark: {
+      dark: true,
+      bg: 'radial-gradient(circle at 30% 0%, #2c2c2e 0%, #000000 70%)',
+      border: 'none',
+      pillBg: 'rgba(255,255,255,0.12)',
+      pillText: '#f5f5f7',
+      glow: 'radial-gradient(ellipse, rgba(255,255,255,0.14) 0%, transparent 72%)',
+    },
   };
 
   return (
@@ -77,7 +100,8 @@ export default function MacBookLineup({ startingPrices = {} }) {
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 md:gap-7">
           {MACBOOKS.map((mb, i) => {
-            const dark = mb.style === 'dark' || (mb.style === 'colorful' && neoNeedsLightText);
+            const s = STYLE[mb.style];
+            const textColor = s.dark ? '#f5f5f7' : '#1d1d1f';
             const price = startingPrices?.[mb.key];
             return (
               <a
@@ -85,38 +109,35 @@ export default function MacBookLineup({ startingPrices = {} }) {
                 href={mb.href}
                 className="macbook-card flex-shrink-0 h-[460px] md:h-[480px] rounded-3xl p-8 flex flex-col relative overflow-hidden no-underline shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_10px_rgba(0,0,0,0.06),0_20px_40px_rgba(0,0,0,0.12)] transition-all duration-300 group"
                 style={{
-                  background: CARD_BG[mb.style],
-                  border: dark ? 'none' : '1px solid #ececee',
+                  background: s.bg,
+                  border: s.border,
                   '--i': i,
                 }}
               >
                 <span
                   className="inline-flex items-center text-xs font-semibold mb-4 relative z-10 px-3 py-1.5 rounded-full w-fit"
-                  style={{
-                    color: dark ? '#f5f5f7' : '#1d1d1f',
-                    background: dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.055)',
-                  }}
+                  style={{ color: s.pillText, background: s.pillBg }}
                 >
                   {mb.who}
                 </span>
                 <h3
                   className="text-2xl font-semibold tracking-tight leading-snug mb-3 relative z-10"
-                  style={{ color: dark ? '#f5f5f7' : '#1d1d1f' }}
+                  style={{ color: textColor }}
                 >
                   {mb.titleLine1}<br />{mb.titleLine2}
                 </h3>
-                <p className="text-lg font-bold relative z-10" style={{ color: dark ? '#f5f5f7' : '#1d1d1f' }}>
+                <p className="text-lg font-bold relative z-10" style={{ color: textColor }}>
                   {price ? `A partir de ${formatCurrency(price)}` : 'Em breve'}
                 </p>
                 {price && (
-                  <p className="text-xs relative z-10" style={{ color: dark ? '#98989d' : '#6e6e73' }}>
+                  <p className="text-xs relative z-10" style={{ color: s.dark ? '#98989d' : '#6e6e73' }}>
                     no PIX
                   </p>
                 )}
 
                 <span
                   className="macbook-card-cta mt-4 inline-flex items-center gap-1.5 text-sm font-semibold relative z-10 w-fit"
-                  style={{ color: dark ? '#f5f5f7' : '#1d1d1f' }}
+                  style={{ color: textColor }}
                 >
                   Ver modelo
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
@@ -127,11 +148,7 @@ export default function MacBookLineup({ startingPrices = {} }) {
                 <div className="absolute inset-x-0 bottom-0 h-[260px] pointer-events-none z-0">
                   <div
                     className="absolute left-1/2 bottom-8 -translate-x-1/2 w-[78%] h-10 rounded-full"
-                    style={{
-                      background: dark
-                        ? 'radial-gradient(ellipse, rgba(255,255,255,0.14) 0%, transparent 72%)'
-                        : 'radial-gradient(ellipse, rgba(0,0,0,0.1) 0%, transparent 72%)',
-                    }}
+                    style={{ background: s.glow }}
                   />
                   <div className="absolute inset-0 flex items-end justify-center">
                     <img
