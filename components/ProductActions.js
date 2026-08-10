@@ -402,8 +402,7 @@ export default function ProductActions({ product, onVariantChange }) {
         <button
           onClick={buyNow}
           disabled={!canAddToCart}
-          className="w-full bg-brand-dark font-bold py-3 px-6 rounded-lg shadow-md hover:opacity-90 transition-all transform hover:scale-105 action-button disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-          style={{ color: affiliate.buttonColor || '#0043f7' }}
+          className="w-full bg-brand-dark text-white font-bold py-3 px-6 rounded-lg shadow-md hover:opacity-90 transition-all transform hover:scale-105 action-button disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
         >
           Comprar Agora
         </button>

@@ -1261,8 +1261,7 @@ export default function CheckoutForm({ config, installmentFees = {} }) {
                   <button
                     type="button"
                     onClick={handleNextStep}
-                    className="flex-1 bg-brand-dark font-bold py-4 rounded-xl hover:opacity-90 transition-colors"
-                    style={{ color: affiliate.buttonColor || '#0043f7' }}
+                    className="flex-1 bg-brand-dark text-white font-bold py-4 rounded-xl hover:opacity-90 transition-colors"
                   >
                     Continuar
                   </button>
