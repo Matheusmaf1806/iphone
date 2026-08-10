@@ -1,5 +1,6 @@
 'use client';
 
+import { useAffiliate } from '../contexts/AffiliateContext';
 import { formatCurrency } from '../lib/pricing';
 
 const MACBOOKS = [
@@ -35,13 +36,33 @@ const MACBOOKS = [
   },
 ];
 
-const CARD_BG = {
-  colorful: 'radial-gradient(circle at 15% 0%, #F2C572 0%, #E8C4C0 35%, #f5f5f7 70%)',
-  light: '#f5f5f7',
-  dark: 'radial-gradient(circle at 30% 0%, #2c2c2e 0%, #000000 70%)',
-};
+// Decide se o texto em cima dessa cor precisa ser claro ou escuro pra continuar
+// legível — a cor da marca vem de cada afiliado (pode ser clara ou escura), então
+// não dá pra cravar "texto escuro" igual antes, quando a cor era fixa e clara.
+function isLightColor(hex) {
+  const clean = (hex || '').replace('#', '');
+  const full = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean;
+  if (full.length !== 6) return true;
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.6;
+}
 
 export default function MacBookLineup({ startingPrices = {} }) {
+  const { brandColor } = useAffiliate();
+  const brand = brandColor || '#0043f7';
+  const neoNeedsLightText = !isLightColor(brand);
+
+  // O card do Neo usa a cor da marca do afiliado no degradê — cada loja
+  // white-label vê a cor dela ali, em vez de uma cor fixa cravada no código.
+  const CARD_BG = {
+    colorful: `radial-gradient(circle at 15% 0%, ${brand} 0%, color-mix(in srgb, ${brand} 40%, white) 35%, #f5f5f7 70%)`,
+    light: '#f5f5f7',
+    dark: 'radial-gradient(circle at 30% 0%, #2c2c2e 0%, #000000 70%)',
+  };
+
   return (
     <section className="py-12 md:py-16 bg-white overflow-hidden">
       <div className="container mx-auto px-4">
@@ -56,7 +77,7 @@ export default function MacBookLineup({ startingPrices = {} }) {
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 md:gap-7">
           {MACBOOKS.map((mb, i) => {
-            const dark = mb.style === 'dark';
+            const dark = mb.style === 'dark' || (mb.style === 'colorful' && neoNeedsLightText);
             const price = startingPrices?.[mb.key];
             return (
               <a
