@@ -332,6 +332,66 @@ export default function ProductVariantsManager({ productId, productName, product
     )));
   };
 
+  // Aplica um conjunto de fotos a todos os SKUs que compartilham um valor de
+  // atributo (ex: todo mundo com Cor = "Preto Espacial") — resolve o caso do
+  // MacBook Pro com 228 SKUs mas só 2 cores: sobe a foto uma vez em vez de
+  // repetir pra cada combinação de memória/armazenamento/chip daquela cor.
+  const [bulkImageType, setBulkImageType] = useState('');
+  const [bulkImageValue, setBulkImageValue] = useState('');
+  const [bulkImageUploading, setBulkImageUploading] = useState(false);
+
+  const bulkImageValueOptions = useMemo(() => {
+    if (!bulkImageType) return [];
+    const set = new Set();
+    rows.forEach(r => {
+      const v = r.attributes[bulkImageType];
+      if (v) set.add(v);
+    });
+    return Array.from(set).sort();
+  }, [rows, bulkImageType]);
+
+  const bulkImageMatchCount = useMemo(() => {
+    if (!bulkImageType || !bulkImageValue) return 0;
+    return rows.filter(r => r.attributes[bulkImageType] === bulkImageValue).length;
+  }, [rows, bulkImageType, bulkImageValue]);
+
+  const handleBulkImageUpload = async (fileList) => {
+    if (!bulkImageType || !bulkImageValue) {
+      alert('Escolha o atributo e o valor (ex: Cor = Preto Espacial) antes de enviar as fotos.');
+      return;
+    }
+    const files = Array.from(fileList).slice(0, MAX_VARIANT_IMAGES);
+    if (files.length === 0) return;
+
+    setBulkImageUploading(true);
+    try {
+      const urls = [];
+      for (const file of files) {
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('folder', 'products');
+        const res = await fetch('/api/upload', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.success) {
+          urls.push(data.url);
+        } else {
+          alert(data.error || 'Erro ao enviar imagem');
+        }
+      }
+      if (urls.length === 0) return;
+
+      let affected = 0;
+      setRows(prev => prev.map(r => {
+        if (r.attributes[bulkImageType] !== bulkImageValue) return r;
+        affected++;
+        return { ...r, image_urls: urls };
+      }));
+      alert(`${urls.length} foto(s) aplicada(s) em ${affected} SKU(s) com ${bulkImageType} = "${bulkImageValue}".`);
+    } finally {
+      setBulkImageUploading(false);
+    }
+  };
+
   const handleSaveAll = async () => {
     if (rows.length === 0) {
       alert('Nenhum SKU para salvar. Gere combinações primeiro.');
@@ -559,6 +619,67 @@ export default function ProductVariantsManager({ productId, productName, product
                   </div>
                 </div>
               </div>
+
+              {/* Fotos por atributo: sobe uma vez e aplica em todos os SKUs que
+                  compartilham aquele valor (ex: todos com Cor = "Preto Espacial") —
+                  evita repetir upload SKU a SKU num produto com dezenas/centenas de
+                  combinações mas só 2-3 cores de verdade. */}
+              {axisOrder.length > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+                  <h4 className="font-semibold text-sm text-blue-900 mb-1">📸 Aplicar fotos por atributo</h4>
+                  <p className="text-xs text-blue-800 mb-2">
+                    Escolha um atributo e um valor (ex: Cor = Preto Espacial) e suba as fotos uma única vez — elas substituem as fotos de todos os SKUs que têm esse valor.
+                  </p>
+                  <div className="flex gap-2 items-end flex-wrap">
+                    <div>
+                      <label className="block text-xs text-gray-500">Atributo</label>
+                      <select
+                        value={bulkImageType}
+                        onChange={(e) => { setBulkImageType(e.target.value); setBulkImageValue(''); }}
+                        className="px-2 py-1.5 text-sm border rounded"
+                      >
+                        <option value="">Selecione...</option>
+                        {axisOrder.map(name => (
+                          <option key={name} value={name}>{name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500">Valor</label>
+                      <select
+                        value={bulkImageValue}
+                        onChange={(e) => setBulkImageValue(e.target.value)}
+                        disabled={!bulkImageType}
+                        className="px-2 py-1.5 text-sm border rounded disabled:opacity-50"
+                      >
+                        <option value="">Selecione...</option>
+                        {bulkImageValueOptions.map(v => (
+                          <option key={v} value={v}>{v}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <label className={`px-3 py-1.5 text-sm font-medium rounded cursor-pointer ${
+                      bulkImageType && bulkImageValue && !bulkImageUploading
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    }`}>
+                      {bulkImageUploading
+                        ? 'Enviando...'
+                        : (bulkImageType && bulkImageValue
+                          ? `Enviar fotos (${bulkImageMatchCount} SKU${bulkImageMatchCount === 1 ? '' : 's'})`
+                          : 'Enviar fotos')}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        disabled={!bulkImageType || !bulkImageValue || bulkImageUploading}
+                        onChange={(e) => { if (e.target.files?.length) handleBulkImageUpload(e.target.files); e.target.value = ''; }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              )}
 
               <div className="overflow-x-auto border rounded-lg">
                 <table className="min-w-full divide-y divide-gray-200 text-sm">

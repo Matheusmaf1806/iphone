@@ -396,13 +396,23 @@ export default function ShoppingAssistant() {
                 </div>
 
                 <div className="assist-result-summary">
+                  {combo.totalCard > combo.totalPix && (
+                    <span className="assist-savings-badge">
+                      <i className="fas fa-bolt"></i>
+                      Economize {Math.round(((combo.totalCard - combo.totalPix) / combo.totalCard) * 100)}% pagando no PIX
+                    </span>
+                  )}
+
                   <div className="assist-result-summary-main">
-                    <div>
+                    <div className="assist-result-pix-col">
                       <span className="assist-result-total-label">No PIX</span>
                       <div className="assist-result-total-value assist-result-pix-value">{formatCurrency(combo.totalPix)}</div>
                     </div>
+
+                    <div className="assist-result-divider" />
+
                     <div className="assist-result-installment-box">
-                      <span className="assist-result-installment-label">cabe em</span>
+                      <span className="assist-result-total-label">Parcelado</span>
                       <div className="assist-result-installment-value">
                         {combo.installmentsUsed}x de {formatCurrency(combo.installmentValue)}
                       </div>
@@ -421,11 +431,11 @@ export default function ShoppingAssistant() {
                     </p>
                   )}
 
-                  <div className="assist-step-actions">
-                    <button type="button" onClick={restart} className="assist-back">Refazer</button>
-                    <button type="button" onClick={handleAddAllToCart} className="assist-cta">
+                  <div className="assist-result-actions">
+                    <button type="button" onClick={handleAddAllToCart} className="assist-cta assist-cta-block">
                       {addedAll ? 'Adicionado!' : 'Adicionar tudo ao carrinho'}
                     </button>
+                    <button type="button" onClick={restart} className="assist-back assist-back-center">Refazer combo</button>
                   </div>
                 </div>
               </div>
@@ -954,10 +964,24 @@ export default function ShoppingAssistant() {
         }
 
         .assist-result-summary {
-          background: color-mix(in srgb, ${brand} 5%, white);
-          border: 1px solid color-mix(in srgb, ${brand} 14%, white);
+          background: #fff;
+          border: 1px solid #e5e5e7;
           border-radius: 14px;
-          padding: 16px;
+          padding: 18px;
+        }
+
+        .assist-savings-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 11px;
+          font-weight: 700;
+          color: #15803d;
+          background: #f0fdf4;
+          border: 1px solid #bbf7d0;
+          padding: 5px 11px;
+          border-radius: 999px;
+          margin-bottom: 14px;
         }
 
         .assist-result-summary-main {
@@ -965,44 +989,63 @@ export default function ShoppingAssistant() {
           flex-wrap: wrap;
           align-items: center;
           justify-content: space-between;
-          gap: 12px;
-          margin-bottom: 4px;
+          gap: 14px;
+          padding-bottom: 16px;
+          margin-bottom: 16px;
+          border-bottom: 1px solid #f0f0f2;
+        }
+
+        .assist-result-pix-col {
+          flex: 1;
+        }
+
+        .assist-result-divider {
+          display: none;
+          width: 1px;
+          align-self: stretch;
+          background: #eaeaec;
+          flex-shrink: 0;
+        }
+        @media (min-width: 480px) {
+          .assist-result-divider {
+            display: block;
+          }
         }
 
         .assist-result-total-label {
-          font-size: 11.5px;
-          color: #6e6e73;
-          font-weight: 600;
+          display: block;
+          font-size: 10.5px;
+          font-weight: 700;
+          letter-spacing: 0.03em;
+          text-transform: uppercase;
+          color: #86868b;
+          margin-bottom: 3px;
         }
         .assist-result-total-value {
-          font-size: 23px;
-          font-weight: 700;
+          font-size: 27px;
+          font-weight: 800;
           color: #0c0e0b;
-          letter-spacing: -0.01em;
+          letter-spacing: -0.02em;
+          line-height: 1.1;
         }
         .assist-result-pix-value {
           color: ${brand};
         }
         .assist-result-pix {
-          font-size: 12px;
-          color: #6e6e73;
+          font-size: 11.5px;
+          color: #86868b;
+          margin-top: 3px;
         }
 
         .assist-result-installment-box {
           text-align: right;
         }
-        .assist-result-installment-label {
-          font-size: 10.5px;
-          font-weight: 700;
-          letter-spacing: 0.03em;
-          text-transform: uppercase;
-          color: #6e6e73;
-        }
         .assist-result-installment-value {
-          font-size: 23px;
+          font-size: 19px;
           font-weight: 700;
           color: #0c0e0b;
           letter-spacing: -0.01em;
+          line-height: 1.1;
         }
 
         .assist-result-note {
@@ -1011,8 +1054,15 @@ export default function ShoppingAssistant() {
           margin: 8px 0 0;
         }
 
-        .assist-result-summary .assist-step-actions {
-          margin-top: 14px;
+        .assist-result-actions {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+          margin-top: 16px;
+        }
+        .assist-back-center {
+          padding: 4px;
         }
       `}</style>
     </section>
