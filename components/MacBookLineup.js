@@ -50,7 +50,7 @@ export default function MacBookLineup({ startingPrices = {} }) {
             Qual MacBook<br />é o seu?
           </h2>
           <p className="text-base md:text-lg text-gray-500">
-            Do dia a dia ao trabalho pesado — veja qual combina com você.
+            Do dia a dia ao trabalho pesado, veja qual combina com você.
           </p>
         </div>
 
@@ -62,7 +62,7 @@ export default function MacBookLineup({ startingPrices = {} }) {
               <a
                 key={mb.key}
                 href={mb.href}
-                className="macbook-card flex-shrink-0 h-[440px] md:h-[460px] rounded-3xl p-8 flex flex-col relative overflow-hidden no-underline shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_10px_rgba(0,0,0,0.06),0_20px_40px_rgba(0,0,0,0.12)] transition-all duration-300 group"
+                className="macbook-card flex-shrink-0 h-[460px] md:h-[480px] rounded-3xl p-8 flex flex-col relative overflow-hidden no-underline shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_10px_rgba(0,0,0,0.06),0_20px_40px_rgba(0,0,0,0.12)] transition-all duration-300 group"
                 style={{
                   background: CARD_BG[mb.style],
                   border: dark ? 'none' : '1px solid #ececee',
@@ -70,34 +70,57 @@ export default function MacBookLineup({ startingPrices = {} }) {
                 }}
               >
                 <span
-                  className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider mb-3 relative z-10 px-2.5 py-1 rounded-full w-fit"
+                  className="inline-flex items-center text-xs font-semibold mb-4 relative z-10 px-3 py-1.5 rounded-full w-fit"
                   style={{
                     color: dark ? '#f5f5f7' : '#1d1d1f',
-                    background: dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.06)',
+                    background: dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.055)',
                   }}
                 >
                   {mb.who}
                 </span>
                 <h3
-                  className="text-2xl font-semibold tracking-tight leading-snug mb-2 relative z-10"
+                  className="text-2xl font-semibold tracking-tight leading-snug mb-3 relative z-10"
                   style={{ color: dark ? '#f5f5f7' : '#1d1d1f' }}
                 >
                   {mb.titleLine1}<br />{mb.titleLine2}
                 </h3>
-                <p
-                  className="text-sm relative z-10"
-                  style={{ color: dark ? '#98989d' : '#6e6e73' }}
-                >
+                <p className="text-lg font-bold relative z-10" style={{ color: dark ? '#f5f5f7' : '#1d1d1f' }}>
                   {price ? `A partir de ${formatCurrency(price)}` : 'Em breve'}
                 </p>
-                <div className="absolute bottom-0 left-0 right-0 h-[250px] flex items-end justify-center pointer-events-none z-0">
-                  <img
-                    src={mb.image}
-                    alt={mb.tag}
-                    className="max-h-full max-w-[88%] object-contain transition-transform duration-500 group-hover:scale-105"
-                    style={{ filter: 'drop-shadow(0 18px 20px rgba(0,0,0,0.18))' }}
-                    loading="lazy"
+                {price && (
+                  <p className="text-xs relative z-10" style={{ color: dark ? '#98989d' : '#6e6e73' }}>
+                    no PIX
+                  </p>
+                )}
+
+                <span
+                  className="macbook-card-cta mt-4 inline-flex items-center gap-1.5 text-sm font-semibold relative z-10 w-fit"
+                  style={{ color: dark ? '#f5f5f7' : '#1d1d1f' }}
+                >
+                  Ver modelo
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </span>
+
+                <div className="absolute inset-x-0 bottom-0 h-[260px] pointer-events-none z-0">
+                  <div
+                    className="absolute left-1/2 bottom-8 -translate-x-1/2 w-[78%] h-10 rounded-full"
+                    style={{
+                      background: dark
+                        ? 'radial-gradient(ellipse, rgba(255,255,255,0.14) 0%, transparent 72%)'
+                        : 'radial-gradient(ellipse, rgba(0,0,0,0.1) 0%, transparent 72%)',
+                    }}
                   />
+                  <div className="absolute inset-0 flex items-end justify-center">
+                    <img
+                      src={mb.image}
+                      alt={mb.tag}
+                      className="max-h-full max-w-[92%] object-contain transition-transform duration-500 group-hover:scale-105"
+                      style={{ filter: 'drop-shadow(0 18px 20px rgba(0,0,0,0.18))' }}
+                      loading="lazy"
+                    />
+                  </div>
                 </div>
               </a>
             );
@@ -113,6 +136,12 @@ export default function MacBookLineup({ startingPrices = {} }) {
         }
         .macbook-card:hover {
           transform: translateY(-6px);
+        }
+        .macbook-card-cta svg {
+          transition: transform 0.25s ease;
+        }
+        .macbook-card:hover .macbook-card-cta svg {
+          transform: translateX(3px);
         }
         @keyframes macbookCardIn {
           from {
