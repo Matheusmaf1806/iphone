@@ -668,7 +668,7 @@ export default function ProductList({ initialProducts }) {
 
       {/* Floating bulk action bar */}
       {selectedIds.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-gray-700">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-wrap items-center justify-center gap-2 sm:gap-3 max-w-[92vw] bg-gray-900 text-white px-4 sm:px-5 py-3 rounded-2xl shadow-2xl border border-gray-700">
           <span className="text-sm font-medium text-gray-300">
             {selectedIds.size} produto{selectedIds.size > 1 ? 's' : ''} selecionado{selectedIds.size > 1 ? 's' : ''}
           </span>
