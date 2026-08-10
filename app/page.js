@@ -13,12 +13,13 @@ import { createServerClient } from '../lib/supabase/server';
 import { calculateAllPrices, resolveCostPriceBRL } from '../lib/pricing';
 import { computeVariantRollup } from '../lib/products';
 
-const CAROUSEL_CATEGORIES = ['iphone', 'mac', 'apple-watch', 'airpods', 'acessorios'];
+const CAROUSEL_CATEGORIES = ['iphone', 'mac', 'apple-watch', 'ipad', 'airpods', 'acessorios'];
 
 const CATEGORY_LABELS = {
   iphone: 'iPhone',
   mac: 'Mac',
   'apple-watch': 'Apple Watch',
+  ipad: 'iPad',
   airpods: 'AirPods',
   acessorios: 'Acessórios',
 };
@@ -116,7 +117,7 @@ export default async function Home() {
   const supabase = createServerClient();
 
   let iphoneProducts = [];
-  let watchProducts = [];
+  let ipadProducts = [];
   let airpodsProducts = [];
   const startingPrices = {};
 
@@ -136,11 +137,11 @@ export default async function Home() {
         CAROUSEL_CATEGORIES.map((slug) => [slug, priceProducts(categoryRowsBySlug[slug], affiliate, config)])
       );
 
-      // Carrossel de destaque só usa iPhone/Watch/AirPods — mostra os mais recentes/
+      // Carrossel de destaque só usa iPhone/iPad/AirPods — mostra os mais recentes/
       // em destaque primeiro (mesma ordem já vinda da query), sem precisar do
       // catálogo inteiro na tela.
       iphoneProducts = pricedBySlug.iphone.slice(0, 12);
-      watchProducts = pricedBySlug['apple-watch'].slice(0, 8);
+      ipadProducts = pricedBySlug.ipad.slice(0, 8);
       airpodsProducts = pricedBySlug.airpods.slice(0, 8);
 
       // "A partir de" de cada categoria (pro carrossel "Todo o universo Apple") — o
@@ -164,19 +165,21 @@ export default async function Home() {
       <main>
         <HeroBanner />
         <FeaturesBar />
-        <CategoriesSection />
         <AppleUniverseCarousel startingPrices={startingPrices} />
 
         {iphoneProducts.length > 0 && (
           <FeaturedProducts products={iphoneProducts} title="iPhone em Destaque" />
         )}
 
-        {(watchProducts.length > 0 || airpodsProducts.length > 0) && (
+        <CategoriesSection />
+        <ShoppingAssistant />
+
+        {(ipadProducts.length > 0 || airpodsProducts.length > 0) && (
           <section className="py-10 md:py-14 bg-gray-50">
             <div className="container mx-auto px-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-10">
-                {watchProducts.length > 0 && (
-                  <FeaturedProducts products={watchProducts} title="Apple Watch" compact />
+                {ipadProducts.length > 0 && (
+                  <FeaturedProducts products={ipadProducts} title="iPad" compact />
                 )}
                 {airpodsProducts.length > 0 && (
                   <FeaturedProducts products={airpodsProducts} title="AirPods" compact />
@@ -186,7 +189,6 @@ export default async function Home() {
           </section>
         )}
 
-        <ShoppingAssistant />
         <TestimonialsSection />
         <PromoBanner />
       </main>
