@@ -824,7 +824,8 @@ on conflict (variant_type_id, value) do nothing;
 insert into product_variant_types (name, is_active, display_order) values
   ('Memória', true, 11),
   ('Acabamento da Tela', true, 12),
-  ('Tamanho da Tela', true, 13)
+  ('Tamanho da Tela', true, 13),
+  ('Chip', true, 14)
 on conflict (name) do nothing;
 
 insert into product_variant_values (variant_type_id, value, display_order)
@@ -846,7 +847,15 @@ join (values
   ('Acabamento da Tela', 'Padrão', 1),
   ('Acabamento da Tela', 'Nano-textura', 2),
   ('Tamanho da Tela', '11"', 1),
-  ('Tamanho da Tela', '13"', 2)
+  ('Tamanho da Tela', '13"', 2),
+  ('Tamanho da Tela', '14"', 3),
+  ('Tamanho da Tela', '16"', 4),
+  ('Chip', 'M5 (10-core CPU, 8-core GPU)', 1),
+  ('Chip', 'M5 (10-core CPU, 10-core GPU)', 2),
+  ('Chip', 'M5 Pro (15-core CPU, 16-core GPU)', 3),
+  ('Chip', 'M5 Pro (18-core CPU, 20-core GPU)', 4),
+  ('Chip', 'M5 Max (18-core CPU, 32-core GPU)', 5),
+  ('Chip', 'M5 Max (18-core CPU, 40-core GPU)', 6)
 ) as v(type_name, value, display_order) on v.type_name = t.name
 on conflict (variant_type_id, value) do nothing;
 
