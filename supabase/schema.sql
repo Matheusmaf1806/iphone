@@ -333,6 +333,25 @@ create table if not exists product_variant_values (
 create index if not exists idx_product_variant_values_type_id on product_variant_values(variant_type_id, display_order);
 
 -- =====================================================================
+-- 8c. product_accessories — acessórios compatíveis curados manualmente pelo
+-- admin (ex: Apple Pencil Pro pro iPad Pro, mas não pro iPad base) — aparecem
+-- como checkbox de "adicionar junto" na página do produto principal.
+-- =====================================================================
+
+create table if not exists product_accessories (
+  id uuid primary key default gen_random_uuid(),
+  product_id uuid not null references products(id) on delete cascade,
+  accessory_product_id uuid not null references products(id) on delete cascade,
+  is_default_checked boolean not null default false,
+  display_order integer not null default 0,
+  created_at timestamptz default now(),
+  unique (product_id, accessory_product_id),
+  check (product_id != accessory_product_id)
+);
+
+create index if not exists idx_product_accessories_product_id on product_accessories(product_id, display_order);
+
+-- =====================================================================
 -- 9. stock_movements — histórico de entradas/saídas de estoque
 -- =====================================================================
 
@@ -848,7 +867,7 @@ begin
   foreach t in array array[
     'admin_users', 'affiliates', 'affiliate_users', 'user_ecommerce',
     'products', 'product_images', 'product_details', 'product_variant_types',
-    'product_variants', 'product_variant_values', 'stock_movements',
+    'product_variants', 'product_variant_values', 'product_accessories', 'stock_movements',
     'affiliate_product_commissions', 'orders', 'order_items', 'payments',
     'coupons', 'coupon_usage', 'affiliate_sales', 'affiliate_withdrawals',
     'platform_config', 'installment_fees'
