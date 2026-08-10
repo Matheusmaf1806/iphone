@@ -459,7 +459,7 @@ export default function ShoppingAssistant() {
         @media (min-width: 900px) {
           .assist-wrap {
             display: grid;
-            grid-template-columns: 0.85fr 1.15fr;
+            grid-template-columns: 1fr 1fr;
             gap: 40px;
             align-items: center;
           }
