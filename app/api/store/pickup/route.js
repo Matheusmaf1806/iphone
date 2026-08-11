@@ -1,14 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getAffiliateSession } from '../../../../lib/affiliateAuth';
+import { getStoreSession } from '../../../../lib/storeAuth';
 import { createServerClient } from '../../../../lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
-// Retirada é validada por quem estiver logado em qualquer /afiliado — o balcão físico
-// atende pedidos de todos os afiliados, não só do afiliado do funcionário que está
-// bipando. Por isso a busca por token NÃO filtra por affiliate_id da sessão.
 export async function GET(request) {
-  const session = getAffiliateSession();
+  const session = getStoreSession();
   if (!session) {
     return NextResponse.json({ success: false, error: 'Não autenticado' }, { status: 401 });
   }
@@ -21,14 +18,14 @@ export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const token = (searchParams.get('token') || '').trim();
   if (!token) {
-    return NextResponse.json({ success: false, error: 'Código informado' }, { status: 400 });
+    return NextResponse.json({ success: false, error: 'Código não informado' }, { status: 400 });
   }
 
   const { data: order, error } = await supabase
     .from('orders')
     .select(`
       id, order_number, customer_name, customer_email, customer_phone,
-      pickup_location, pickup_travel_date, status, payment_status,
+      pickup_location, pickup_location_id, pickup_travel_date, status, payment_status,
       delivered_at, total, created_at,
       pickup_locations ( name, address, city, state ),
       order_items ( product_name, quantity, variant_attributes )
@@ -44,7 +41,7 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
-  const session = getAffiliateSession();
+  const session = getStoreSession();
   if (!session) {
     return NextResponse.json({ success: false, error: 'Não autenticado' }, { status: 401 });
   }
@@ -62,12 +59,18 @@ export async function POST(request) {
 
   const { data: order, error } = await supabase
     .from('orders')
-    .select('id, order_number, status, payment_status, delivered_at')
+    .select('id, order_number, status, payment_status, delivered_at, pickup_location_id')
     .eq('pickup_token', token)
     .single();
 
   if (error || !order) {
     return NextResponse.json({ success: false, error: 'Pedido não encontrado para esse código' }, { status: 404 });
+  }
+
+  // Usuário atrelado a um local específico só confirma retiradas daquele local —
+  // usuário sem local atribuído (pickupLocationId nulo) cobre qualquer um.
+  if (session.pickupLocationId && order.pickup_location_id && session.pickupLocationId !== order.pickup_location_id) {
+    return NextResponse.json({ success: false, error: 'Esse pedido é para retirada em outro local.' }, { status: 403 });
   }
 
   if (order.payment_status !== 'paid') {

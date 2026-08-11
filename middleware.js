@@ -45,11 +45,48 @@ export function middleware(request) {
     }
   }
 
+  // Proteger rotas do balcão de retirada (/loja) — sistema de login totalmente
+  // separado do afiliado e da gestão.
+  if (pathname.startsWith('/loja/adm')) {
+    const storeSession = request.cookies.get('store_session');
+
+    if (!storeSession) {
+      const loginUrl = new URL('/loja/login', request.url);
+      loginUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    try {
+      const sessionData = JSON.parse(
+        Buffer.from(storeSession.value, 'base64').toString()
+      );
+
+      const SESSION_DURATION = 60 * 60 * 24 * 30 * 1000; // 30 dias em ms
+      const sessionAge = Date.now() - sessionData.timestamp;
+
+      if (sessionAge > SESSION_DURATION) {
+        const loginUrl = new URL('/loja/login', request.url);
+        loginUrl.searchParams.set('redirect', pathname);
+        const response = NextResponse.redirect(loginUrl);
+        response.cookies.delete('store_session');
+        return response;
+      }
+    } catch (error) {
+      console.error('Error parsing store session:', error);
+      const loginUrl = new URL('/loja/login', request.url);
+      loginUrl.searchParams.set('redirect', pathname);
+      const response = NextResponse.redirect(loginUrl);
+      response.cookies.delete('store_session');
+      return response;
+    }
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
   matcher: [
     '/afiliado/adm/:path*',
+    '/loja/adm/:path*',
   ],
 };

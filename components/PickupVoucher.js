@@ -8,7 +8,7 @@ export default function PickupVoucher({ orderNumber, pickupToken, pickupLocation
 
   useEffect(() => {
     if (!pickupToken) return;
-    const url = `${window.location.origin}/afiliado/adm/retiradas/${pickupToken}`;
+    const url = `${window.location.origin}/loja/adm/${pickupToken}`;
     QRCode.toDataURL(url, { width: 240, margin: 1, color: { dark: '#111827', light: '#ffffff' } })
       .then(setQrDataUrl)
       .catch((err) => console.error('Error generating QR code:', err));
