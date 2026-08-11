@@ -133,6 +133,7 @@ export default function ProductActions({ product, onVariantChange }) {
   const displayCardPrice = isVariantProduct ? (selectedVariant?.cardPrice ?? null) : product.cardPrice;
   const hasPixDiscount = displayPrice != null && displayCardPrice != null && (displayCardPrice - displayPrice) > 0.01;
   const pixDiscountPercent = hasPixDiscount ? Math.round(((displayCardPrice - displayPrice) / displayCardPrice) * 100) : 0;
+  const isIphone = (product.category || '').toLowerCase() === 'iphone';
 
   const buildCartProduct = () => (
     isVariantProduct
@@ -398,6 +399,15 @@ export default function ProductActions({ product, onVariantChange }) {
           </>
         )}
       </div>
+
+      {isIphone && (
+        <div className="mb-6 flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+          <span className="text-2xl flex-shrink-0" aria-hidden="true">🎁</span>
+          <p className="text-sm font-semibold text-blue-900">
+            Capinha e película de brinde na compra deste iPhone!
+          </p>
+        </div>
+      )}
 
       {accessories.length > 0 && (
         <div className="mb-6">
