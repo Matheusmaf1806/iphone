@@ -361,27 +361,20 @@ export async function POST(request) {
       });
     }
 
-    // Se for cartão, processar pagamento
-    if (payment.method === 'credit-card') {
+    // Cartão de crédito é processado via PayPal CardFields — a captura (ver
+    // /api/payments/paypal/capture-order) já aconteceu ANTES desta rota ser chamada,
+    // então precisa refletir "pago" aqui do mesmo jeito que o fluxo PayPal Buttons faz
+    // logo abaixo. Sem isso o pedido ficava pending pra sempre mesmo com o dinheiro já
+    // capturado — inclusive bloqueando a retirada em /loja, que exige payment_status='paid'.
+    if (payment.method === 'credit-card' || payment.method === 'paypal') {
       await supabase.from('payments').insert({
         order_id: order.id,
-        method: 'credit-card',
-        amount: orderTotal,
-        status: 'pending',
-      });
-    }
-
-    // Se for PayPal, registrar transação
-    if (payment.method === 'paypal') {
-      await supabase.from('payments').insert({
-        order_id: order.id,
-        method: 'paypal',
+        method: payment.method,
         amount: orderTotal,
         status: payment.paypalTransactionId ? 'completed' : 'pending',
         transaction_id: payment.paypalTransactionId || null,
       });
 
-      // PayPal já captura o pagamento no momento da criação — refletir isso no pedido
       if (payment.paypalTransactionId) {
         await supabase
           .from('orders')
