@@ -12,6 +12,25 @@ const asaasHeaders = () => ({
   'Content-Type': 'application/json',
 });
 
+// Lê a resposta como texto primeiro — se a Asaas devolver algo que não é JSON
+// (ex: página de erro HTML num 401/403 de chave inválida), `.json()` direto
+// quebra sem mostrar nada útil no log. Isso garante que o log sempre mostre o
+// status HTTP e o corpo cru, seja lá o que a Asaas mandou.
+async function fetchAsaas(url, options, label) {
+  const res = await fetch(url, options);
+  const raw = await res.text();
+  let data = null;
+  try {
+    data = raw ? JSON.parse(raw) : null;
+  } catch (parseErr) {
+    console.error(`[Asaas] ${label} — resposta não é JSON (status ${res.status}):`, raw.slice(0, 500));
+  }
+  if (!res.ok) {
+    console.error(`[Asaas] ${label} — HTTP ${res.status}:`, data || raw.slice(0, 500));
+  }
+  return { ok: res.ok, status: res.status, data };
+}
+
 export async function POST(request) {
   try {
     const { orderId, amount, customer } = await request.json();
@@ -23,7 +42,15 @@ export async function POST(request) {
       );
     }
 
+    if (!customer.cpf || !customer.phone) {
+      return NextResponse.json(
+        { success: false, error: 'CPF e telefone são obrigatórios' },
+        { status: 400 }
+      );
+    }
+
     if (!process.env.ASAAS_API_KEY) {
+      console.error('[Asaas] ASAAS_API_KEY não configurada');
       return NextResponse.json(
         { success: false, error: 'Gateway de pagamento não configurado' },
         { status: 500 }
@@ -31,11 +58,13 @@ export async function POST(request) {
     }
 
     const baseUrl = getAsaasBaseUrl();
+    console.log(`[Asaas] create-pix — ambiente=${process.env.ASAAS_ENVIRONMENT || 'sandbox'} baseUrl=${baseUrl} orderId=${orderId}`);
+
     const cpf = customer.cpf.replace(/\D/g, '');
     const phone = customer.phone.replace(/\D/g, '');
 
     // 1. Criar cliente no Asaas
-    const customerRes = await fetch(`${baseUrl}/customers`, {
+    const customerResult = await fetchAsaas(`${baseUrl}/customers`, {
       method: 'POST',
       headers: asaasHeaders(),
       body: JSON.stringify({
@@ -45,12 +74,9 @@ export async function POST(request) {
         cpfCnpj: cpf,
         notificationDisabled: true,
       }),
-    });
+    }, 'criar cliente');
 
-    const customerData = await customerRes.json();
-
-    if (!customerData.id) {
-      console.error('Asaas customer error:', customerData);
+    if (!customerResult.data?.id) {
       return NextResponse.json(
         { success: false, error: 'Erro ao criar cliente no gateway de pagamento' },
         { status: 500 }
@@ -62,23 +88,20 @@ export async function POST(request) {
       .toISOString()
       .split('T')[0];
 
-    const paymentRes = await fetch(`${baseUrl}/payments`, {
+    const paymentResult = await fetchAsaas(`${baseUrl}/payments`, {
       method: 'POST',
       headers: asaasHeaders(),
       body: JSON.stringify({
-        customer: customerData.id,
+        customer: customerResult.data.id,
         billingType: 'PIX',
         value: Number(amount.toFixed(2)),
         dueDate,
         description: `Pedido ${SITE_NAME} #${orderId}`,
         externalReference: String(orderId),
       }),
-    });
+    }, 'criar cobrança PIX');
 
-    const paymentData = await paymentRes.json();
-
-    if (!paymentData.id) {
-      console.error('Asaas payment error:', paymentData);
+    if (!paymentResult.data?.id) {
       return NextResponse.json(
         { success: false, error: 'Erro ao criar cobrança PIX' },
         { status: 500 }
@@ -86,14 +109,13 @@ export async function POST(request) {
     }
 
     // 3. Buscar QR Code PIX
-    const qrRes = await fetch(
-      `${baseUrl}/payments/${paymentData.id}/pixQrCode`,
-      { headers: asaasHeaders() }
+    const qrResult = await fetchAsaas(
+      `${baseUrl}/payments/${paymentResult.data.id}/pixQrCode`,
+      { headers: asaasHeaders() },
+      'buscar QR Code'
     );
-    const qrData = await qrRes.json();
 
-    if (!qrData.encodedImage || !qrData.payload) {
-      console.error('Asaas QR code error:', qrData);
+    if (!qrResult.data?.encodedImage || !qrResult.data?.payload) {
       return NextResponse.json(
         { success: false, error: 'Erro ao gerar QR Code PIX' },
         { status: 500 }
@@ -106,7 +128,7 @@ export async function POST(request) {
       await supabase
         .from('payments')
         .update({
-          transaction_id: paymentData.id,
+          transaction_id: paymentResult.data.id,
           status: 'pending',
         })
         .eq('order_id', orderId)
@@ -116,14 +138,14 @@ export async function POST(request) {
     return NextResponse.json({
       success: true,
       data: {
-        chargeId: paymentData.id,
-        qrCodeImage: qrData.encodedImage,
-        copyPasteCode: qrData.payload,
-        expiresAt: paymentData.dueDate,
+        chargeId: paymentResult.data.id,
+        qrCodeImage: qrResult.data.encodedImage,
+        copyPasteCode: qrResult.data.payload,
+        expiresAt: paymentResult.data.dueDate,
       },
     });
   } catch (error) {
-    console.error('Error creating Asaas PIX charge:', error);
+    console.error('[Asaas] Exceção não tratada em create-pix:', error);
     return NextResponse.json(
       { success: false, error: 'Erro ao processar pagamento PIX' },
       { status: 500 }
