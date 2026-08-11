@@ -12,6 +12,7 @@ export default function ProductCard({ product, layout = 'grid' }) {
   const hasDiscount = cardPrice > displayPrice && (cardPrice - displayPrice) > 0.01;
   const discountPercent = hasDiscount ? Math.round(((cardPrice - displayPrice) / cardPrice) * 100) : 0;
   const hasVariants = product.hasVariants || product.has_variants;
+  const isIphone = (product.category || '').toLowerCase() === 'iphone';
 
   const handleAddToCart = (e) => {
     // Produtos com variações (cor/armazenamento/versão) não têm um SKU único para
@@ -100,6 +101,11 @@ export default function ProductCard({ product, layout = 'grid' }) {
             {cardPrice > displayPrice && (
               <p className="text-[11px] text-gray-500 mt-0.5">
                 ou R$ {cardPrice.toFixed(2).replace('.', ',')} no cartão
+              </p>
+            )}
+            {isIphone && (
+              <p className="text-[11px] font-semibold text-blue-700 mt-1">
+                🎁 Capinha e película de brinde
               </p>
             )}
           </div>

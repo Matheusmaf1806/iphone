@@ -988,7 +988,7 @@ export default function CheckoutForm({ config, installmentFees = {} }) {
                   >
                     <i className="fas fa-credit-card text-lg sm:text-2xl mb-1 sm:mb-2" style={{ color: affiliate.buttonColor || '#0043f7' }}></i>
                     <p className="font-bold text-gray-900 text-sm">Cartão</p>
-                    <p className="text-[10px] text-gray-500">Até 21x s/ juros</p>
+                    <p className="text-[10px] text-gray-500">Até 10x s/ juros</p>
                   </button>
                 </div>
 
@@ -1555,10 +1555,10 @@ export default function CheckoutForm({ config, installmentFees = {} }) {
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-500 flex items-center gap-1">
                           <i className="fas fa-credit-card text-xs text-blue-500"></i>
-                          21x cartão
+                          10x cartão
                         </span>
                         <span className="font-bold text-blue-600">
-                          R$ {((previewCard * item.quantity) / 21).toFixed(2).replace('.', ',')}/mês
+                          R$ {((previewCard * item.quantity) / 10).toFixed(2).replace('.', ',')}/mês
                         </span>
                       </div>
                       {commissionUnit > 0 && (

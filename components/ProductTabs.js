@@ -10,7 +10,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'Quais formas de pagamento vocês aceitam?',
-    answer: 'PIX (com desconto), cartão de crédito parcelado em até 21x sem juros, e PayPal.',
+    answer: 'PIX (com desconto), cartão de crédito parcelado em até 10x sem juros, e PayPal.',
   },
   {
     question: 'Por que o PIX é mais barato que o cartão?',

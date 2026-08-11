@@ -78,7 +78,7 @@ const CATEGORIES = [
 
 const BUDGET_OPTIONS = [150, 300, 500, 800, 1200];
 const MIN_INSTALLMENTS = 1;
-const MAX_INSTALLMENTS = 21;
+const MAX_INSTALLMENTS = 10;
 
 // Tamanho vai via atributo width/height (não via classe CSS): estes ícones são
 // componentes à parte, então o escopo do styled-jsx do componente pai não os
@@ -111,7 +111,7 @@ export default function ShoppingAssistant() {
   const [step, setStep] = useState('categories'); // categories | budget | installments | loading | result | empty
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [budgetInput, setBudgetInput] = useState('');
-  const [maxInstallments, setMaxInstallments] = useState(12);
+  const [maxInstallments, setMaxInstallments] = useState(6);
   const [combo, setCombo] = useState(null);
   const [errorInfo, setErrorInfo] = useState(null);
   const [addedAll, setAddedAll] = useState(false);
@@ -337,7 +337,7 @@ export default function ShoppingAssistant() {
                 />
                 <div className="assist-slider-labels">
                   <span>1x</span>
-                  <span>21x</span>
+                  <span>10x</span>
                 </div>
                 <div className="assist-step-actions">
                   <button type="button" onClick={() => setStep('budget')} className="assist-back">Voltar</button>

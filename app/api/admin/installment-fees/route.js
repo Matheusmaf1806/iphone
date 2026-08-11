@@ -56,7 +56,7 @@ export async function PUT(request) {
     const installmentsNum = parseInt(installments, 10);
     const feeNum = parseFloat(feePercentage);
 
-    if (!installmentsNum || installmentsNum < 1 || installmentsNum > 21) {
+    if (!installmentsNum || installmentsNum < 1 || installmentsNum > 10) {
       return NextResponse.json({ success: false, error: 'Número de parcelas inválido' }, { status: 400 });
     }
     if (isNaN(feeNum) || feeNum < 0) {

@@ -66,8 +66,11 @@ export default function ProductModal({ product, onClose, onSave }) {
       .then(data => {
         if (!data.success) return;
         const byKey = Object.fromEntries(data.data.map(c => [c.key, parseFloat(c.value)]));
+        const usdRow = data.data.find(c => c.key === 'usd_brl_rate');
         setPlatformConfig({
-          usdBrlRate: byKey.usd_brl_rate || 5.5,
+          // Prefere a cotação ao vivo (PTAX + IOF + spread) — o preview de custo
+          // aqui precisa bater com o que a cascata de preço real usa.
+          usdBrlRate: (usdRow?.live_value ?? byKey.usd_brl_rate) || 5.5,
           defaultImportTaxPercentage: byKey.default_import_tax_percentage || 0,
         });
       })
@@ -249,7 +252,7 @@ export default function ProductModal({ product, onClose, onSave }) {
       const salePrice = calculateSalePrice();
 
       // Calcular valor da parcela (assumindo parcelamento padrão)
-      const defaultInstallments = 21; // Todos produtos podem ser parcelados em até 21x
+      const defaultInstallments = 10; // Todos produtos podem ser parcelados em até 10x
       const installmentValue = salePrice > 0 ? (salePrice / defaultInstallments) : null;
 
       const mainImageUrl = productImages.length > 0 ? productImages[0] : formData.image_url || null;
@@ -905,7 +908,7 @@ export default function ProductModal({ product, onClose, onSave }) {
                           {' '}/ (1 - {formData.supplier_margin_percentage}%) = R$ {salePrice.toFixed(2)}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
-                          📦 Parcelamento: até 21x de R$ {(salePrice / 21).toFixed(2)} sem juros
+                          📦 Parcelamento: até 10x de R$ {(salePrice / 10).toFixed(2)} sem juros
                         </p>
                       </div>
                       <div className="text-right">

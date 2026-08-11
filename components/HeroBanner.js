@@ -6,8 +6,8 @@ import { useAffiliate } from '../contexts/AffiliateContext';
 // Banners padrão (usados quando não há banners configurados no banco)
 const DEFAULT_SLIDES = [
   { id: 1, image: '/Banner-Site/1.png', alt: 'Encontre seu desejo ideal' },
-  { id: 2, image: '/Banner-Site/2.png', alt: 'Compre seu AirPods em até 21x no cartão' },
-  { id: 3, image: '/Banner-Site/3.png', alt: 'Parcelamento em até 21x no cartão' },
+  { id: 2, image: '/Banner-Site/2.png', alt: 'Compre seu AirPods em até 10x no cartão' },
+  { id: 3, image: '/Banner-Site/3.png', alt: 'Parcelamento em até 10x no cartão' },
 ];
 
 export default function HeroBanner({ slides: slidesProp }) {

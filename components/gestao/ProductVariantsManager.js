@@ -67,8 +67,11 @@ export default function ProductVariantsManager({ productId, productName, product
 
       if (configData.success) {
         const byKey = Object.fromEntries(configData.data.map(c => [c.key, parseFloat(c.value)]));
+        const usdRow = configData.data.find(c => c.key === 'usd_brl_rate');
         setPlatformConfig({
-          usdBrlRate: byKey.usd_brl_rate || 5.5,
+          // Prefere a cotação ao vivo (PTAX + IOF + spread) — o preview de custo
+          // aqui precisa bater com o que a cascata de preço real usa.
+          usdBrlRate: (usdRow?.live_value ?? byKey.usd_brl_rate) || 5.5,
           defaultImportTaxPercentage: byKey.default_import_tax_percentage || 0,
         });
       }
