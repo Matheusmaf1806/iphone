@@ -128,8 +128,17 @@ export default function PlatformConfigManager() {
                 </>
               ) : (
                 <>
-                  <span className="text-lg font-bold text-gray-900">
-                    {config.key === 'usd_brl_rate' ? `R$ ${parseFloat(config.value).toFixed(2)}` : `${parseFloat(config.value).toFixed(2)}${config.suffix}`}
+                  <span className="text-right">
+                    <span className="text-lg font-bold text-gray-900 block">
+                      {config.key === 'usd_brl_rate'
+                        ? `R$ ${parseFloat(config.live_value ?? config.value).toFixed(2)}`
+                        : `${parseFloat(config.value).toFixed(2)}${config.suffix}`}
+                    </span>
+                    {config.key === 'usd_brl_rate' && (
+                      <span className="text-[11px] text-gray-400 block">
+                        automático · reserva R$ {parseFloat(config.value).toFixed(2)}
+                      </span>
+                    )}
                   </span>
                   <button
                     onClick={() => startEdit(config)}

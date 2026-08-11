@@ -214,7 +214,7 @@ create table if not exists products (
   low_stock_threshold integer default 10,
   manage_stock boolean default true,
   allow_backorders boolean default false,
-  installments integer default 21,
+  installments integer default 10,
   installment_value numeric(10,2),
   weight numeric,
   height numeric,
@@ -610,22 +610,20 @@ insert into platform_config (key, value, description) values
 on conflict (key) do nothing;
 
 -- =====================================================================
--- 18.1 installment_fees — taxa do cartão por número de parcelas (1 a 21x)
--- Usada onde o número de parcelas já é conhecido (ex: assistente de compra da
--- home). O resto do site continua usando o card_fee_percentage único acima.
+-- 18.1 installment_fees — taxa do cartão por número de parcelas (1 a 10x)
+-- Taxa fixa de 9,68% em qualquer número de parcelas — usada onde o número de
+-- parcelas já é conhecido (ex: assistente de compra da home). O resto do
+-- site continua usando o card_fee_percentage único acima (mesmo valor).
 -- =====================================================================
 
 create table if not exists installment_fees (
-  installments integer primary key check (installments between 1 and 21),
+  installments integer primary key check (installments between 1 and 10),
   fee_percentage numeric(5,2) not null default 0
 );
 
 insert into installment_fees (installments, fee_percentage) values
-  (1, 7.60), (2, 10.39), (3, 11.60), (4, 12.84), (5, 14.10),
-  (6, 15.39), (7, 17.23), (8, 18.59), (9, 19.99), (10, 21.42),
-  (11, 22.88), (12, 24.38), (13, 26.70), (14, 28.29), (15, 29.92),
-  (16, 31.60), (17, 33.32), (18, 35.09), (19, 36.90), (20, 38.76),
-  (21, 40.68)
+  (1, 9.68), (2, 9.68), (3, 9.68), (4, 9.68), (5, 9.68),
+  (6, 9.68), (7, 9.68), (8, 9.68), (9, 9.68), (10, 9.68)
 on conflict (installments) do nothing;
 
 -- =====================================================================

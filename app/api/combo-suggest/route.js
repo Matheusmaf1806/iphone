@@ -16,7 +16,7 @@ const CATEGORY_LABELS = {
   acessorios: 'Acessórios',
 };
 
-const MAX_INSTALLMENTS_ALLOWED = 21;
+const MAX_INSTALLMENTS_ALLOWED = 10;
 const MAX_ITEMS_PER_CATEGORY = 25;
 
 export async function POST(request) {
