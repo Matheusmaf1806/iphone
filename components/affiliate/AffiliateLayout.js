@@ -36,6 +36,11 @@ export default function AffiliateLayout({ children, session }) {
       path: '/afiliado/adm/vendas',
     },
     {
+      icon: 'fa-qrcode',
+      label: 'Retiradas',
+      path: '/afiliado/adm/retiradas',
+    },
+    {
       icon: 'fa-money-bill-wave',
       label: 'Saques',
       path: '/afiliado/adm/saques',
@@ -133,7 +138,7 @@ export default function AffiliateLayout({ children, session }) {
           <nav className="flex-1 p-4 overflow-y-auto">
             <ul className="space-y-1">
               {menuItems.map((item) => {
-                const isActive = pathname === item.path;
+                const isActive = pathname === item.path || pathname.startsWith(item.path + '/');
                 return (
                   <li key={item.path}>
                     <Link

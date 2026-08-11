@@ -1,12 +1,21 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Loader from '../../../components/Loader';
 
 export default function AffiliateLoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <AffiliateLoginForm />
+    </Suspense>
+  );
+}
+
+function AffiliateLoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -29,7 +38,8 @@ export default function AffiliateLoginPage() {
       const data = await response.json();
 
       if (data.success) {
-        router.push('/afiliado/adm');
+        const redirectTo = searchParams.get('redirect');
+        router.push(redirectTo && redirectTo.startsWith('/afiliado/adm') ? redirectTo : '/afiliado/adm');
       } else {
         setError(data.error || 'Erro ao fazer login');
       }
