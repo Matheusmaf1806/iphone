@@ -423,6 +423,34 @@ insert into pickup_locations (name, display_order) values
 on conflict (name) do nothing;
 
 -- =====================================================================
+-- 11.2 store_users — login do balcão de retirada (/loja), separado de
+-- afiliado e de gestão. Confirma a entrega física do aparelho.
+-- =====================================================================
+
+create table if not exists store_users (
+  id uuid primary key default gen_random_uuid(),
+  username text not null unique,
+  password_hash text not null,
+  full_name text not null,
+  email text,
+  phone text,
+  -- Nulo = acesso a retiradas de qualquer local. Preenchido = só confirma
+  -- retiradas daquele local específico.
+  pickup_location_id uuid references pickup_locations(id),
+  is_active boolean not null default true,
+  last_login timestamptz,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists idx_store_users_pickup_location on store_users(pickup_location_id);
+
+drop trigger if exists trg_store_users_updated_at on store_users;
+create trigger trg_store_users_updated_at
+  before update on store_users
+  for each row execute function set_updated_at();
+
+-- =====================================================================
 -- 12. orders — pedidos (com retirada em Orlando, não entrega nacional)
 -- =====================================================================
 
@@ -441,7 +469,7 @@ create table if not exists orders (
   pickup_travel_notes text,
   pickup_terms_accepted boolean not null default false,
   pickup_token text not null default replace(gen_random_uuid()::text, '-', ''), -- código do QR/voucher de retirada
-  delivered_by uuid references affiliate_users(id), -- quem confirmou a retirada (bipou o QR)
+  delivered_by uuid references store_users(id), -- quem confirmou a retirada (bipou o QR), no /loja
 
   -- Campos legados de entrega nacional (mantidos nullable por compatibilidade;
   -- não são mais preenchidos pelo checkout atual)
@@ -919,7 +947,7 @@ begin
     'product_variants', 'product_variant_values', 'product_accessories', 'stock_movements',
     'affiliate_product_commissions', 'orders', 'order_items', 'payments',
     'coupons', 'coupon_usage', 'affiliate_sales', 'affiliate_withdrawals',
-    'platform_config', 'installment_fees', 'pickup_locations'
+    'platform_config', 'installment_fees', 'pickup_locations', 'store_users'
   ]
   loop
     execute format('alter table %I enable row level security', t);
