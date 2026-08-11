@@ -90,7 +90,7 @@ export default function ClientHeader({ config }) {
           {/* Logo */}
           <div>
             <a href="/">
-              <Logo src={config.logo} name={config.name} imgClassName="h-14" textClassName="text-2xl font-bold tracking-tight text-white" />
+              <Logo src={config.logo} name={config.name} imgClassName="h-16 sm:h-24" textClassName="text-2xl font-bold tracking-tight text-white" />
             </a>
           </div>
 
