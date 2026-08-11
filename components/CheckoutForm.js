@@ -61,6 +61,8 @@ export default function CheckoutForm({ config, installmentFees = {} }) {
 
   // PIX / Asaas
   const [pixData, setPixData] = useState(null);
+  const [pixError, setPixError] = useState('');
+  const [pixRetrying, setPixRetrying] = useState(false);
 
   // Locais de retirada — vêm do admin (antes eram 2 valores fixos no código)
   const [pickupLocations, setPickupLocations] = useState([]);
@@ -545,6 +547,46 @@ export default function CheckoutForm({ config, installmentFees = {} }) {
     }
   };
 
+  // Extraído do submitOrder pra poder ser chamado de novo pelo botão "Tentar
+  // novamente" — o pedido já existe nesse ponto (criado em /api/orders/create), só a
+  // cobrança PIX em si falhou, então não recria o pedido, só tenta gerar a cobrança de novo.
+  const createPixCharge = async (order) => {
+    setPixError('');
+    try {
+      const pixRes = await fetch('/api/payments/asaas/create-pix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: order.orderId,
+          amount: order.total,
+          customer: {
+            name: formData.fullName,
+            email: formData.email,
+            phone: formData.phone,
+            cpf: formData.cpf,
+          },
+        }),
+      });
+      const pixResult = await pixRes.json();
+      if (pixResult.success) {
+        setPixData(pixResult.data);
+      } else {
+        console.error('Asaas PIX error:', pixResult.error);
+        setPixError(pixResult.error || 'Não foi possível gerar o QR Code do PIX agora.');
+      }
+    } catch (err) {
+      console.error('Error calling Asaas PIX:', err);
+      setPixError('Não foi possível gerar o QR Code do PIX agora.');
+    }
+  };
+
+  const handleRetryPix = async () => {
+    if (!orderResult) return;
+    setPixRetrying(true);
+    await createPixCharge(orderResult);
+    setPixRetrying(false);
+  };
+
   const submitOrder = async (paymentMethod, paypalTransactionId) => {
     setIsSubmitting(true);
     setErrors({});
@@ -603,32 +645,8 @@ export default function CheckoutForm({ config, installmentFees = {} }) {
         }
 
         if (method === 'pix') {
-          // Criar cobrança PIX real no Asaas
-          try {
-            const pixRes = await fetch('/api/payments/asaas/create-pix', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                orderId: data.data.orderId,
-                amount: data.data.total,
-                customer: {
-                  name: formData.fullName,
-                  email: formData.email,
-                  phone: formData.phone,
-                  cpf: formData.cpf,
-                },
-              }),
-            });
-            const pixResult = await pixRes.json();
-            if (pixResult.success) {
-              setPixData(pixResult.data);
-            } else {
-              console.error('Asaas PIX error:', pixResult.error);
-            }
-          } catch (err) {
-            console.error('Error calling Asaas PIX:', err);
-          }
           setCurrentStep(4);
+          await createPixCharge(data.data);
         } else {
           // Clear cart and show success
           clearCart();
@@ -1168,6 +1186,23 @@ export default function CheckoutForm({ config, installmentFees = {} }) {
                       </div>
                       <p className="text-xs text-gray-500">Escaneie o QR Code com o app do seu banco</p>
                     </>
+                  ) : pixError ? (
+                    <div className="py-6 text-center">
+                      <i className="fas fa-exclamation-triangle text-3xl text-amber-500 mb-3"></i>
+                      <p className="text-sm font-semibold text-gray-800 mb-1">Não foi possível gerar o QR Code</p>
+                      <p className="text-xs text-gray-500 mb-4">{pixError}</p>
+                      <p className="text-xs text-gray-500 mb-4">
+                        Seu pedido #{orderResult?.orderId} já foi registrado — não precisa refazer, é só tentar de novo.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleRetryPix}
+                        disabled={pixRetrying}
+                        className="px-5 py-2 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                      >
+                        {pixRetrying ? 'Tentando...' : 'Tentar novamente'}
+                      </button>
+                    </div>
                   ) : (
                     <div className="py-8 text-gray-400">
                       <i className="fas fa-spinner fa-spin text-3xl mb-3"></i>
