@@ -42,6 +42,22 @@ export async function POST(request) {
       }, { status: 500 });
     }
 
+    // pickupLocationId é opcional pra não quebrar caso o front ainda mande só o texto
+    // livre antigo — mas quando vem, precisa apontar pra um local ativo de verdade.
+    let pickupLocationId = null;
+    if (pickup.pickupLocationId) {
+      const { data: pickupLocationRow } = await supabase
+        .from('pickup_locations')
+        .select('id')
+        .eq('id', pickup.pickupLocationId)
+        .eq('is_active', true)
+        .single();
+      if (!pickupLocationRow) {
+        return NextResponse.json({ success: false, error: 'Local de retirada inválido' }, { status: 400 });
+      }
+      pickupLocationId = pickupLocationRow.id;
+    }
+
     // Obter configurações da plataforma
     const config = await getPlatformConfig();
 
@@ -263,6 +279,7 @@ export async function POST(request) {
         customer_cpf: customer.cpf,
         pickup_travel_date: pickup.travelDate,
         pickup_location: pickup.pickupLocation,
+        pickup_location_id: pickupLocationId,
         pickup_travel_notes: pickup.travelNotes || null,
         pickup_terms_accepted: pickup.termsAccepted,
         payment_method: payment.method,
@@ -386,6 +403,7 @@ export async function POST(request) {
         orderNumber: order.order_number,
         total: orderTotal,
         paymentMethod: payment.method,
+        pickupToken: order.pickup_token,
       },
     });
   } catch (error) {

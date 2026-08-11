@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { calculateAllPrices, resolveCostPriceBRL } from '../lib/pricing';
+import PickupVoucher from './PickupVoucher';
 
 // Cópia local da função pura de lib/installmentFees.js — não dá pra importar o módulo
 // original aqui porque ele também importa lib/supabase/server.js (next/headers), que
@@ -39,6 +40,7 @@ export default function CheckoutForm({ config, installmentFees = {} }) {
     // Retirada em Orlando
     travelDate: '',
     pickupLocation: '',
+    pickupLocationId: '',
     travelNotes: '',
     termsAccepted: false,
     // Pagamento
@@ -59,6 +61,17 @@ export default function CheckoutForm({ config, installmentFees = {} }) {
 
   // PIX / Asaas
   const [pixData, setPixData] = useState(null);
+
+  // Locais de retirada — vêm do admin (antes eram 2 valores fixos no código)
+  const [pickupLocations, setPickupLocations] = useState([]);
+  useEffect(() => {
+    fetch('/api/pickup-locations')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) setPickupLocations(data.data);
+      })
+      .catch((err) => console.error('Error loading pickup locations:', err));
+  }, []);
 
   // Nº de parcelas escolhido pro pagamento no cartão — a taxa do cartão cresce por
   // parcela (installment_fees, valores reais do gateway), diferente da taxa fixa
@@ -548,6 +561,7 @@ export default function CheckoutForm({ config, installmentFees = {} }) {
         pickup: {
           travelDate: formData.travelDate,
           pickupLocation: formData.pickupLocation,
+          pickupLocationId: formData.pickupLocationId || null,
           travelNotes: formData.travelNotes,
           termsAccepted: formData.termsAccepted,
         },
@@ -672,12 +686,6 @@ export default function CheckoutForm({ config, installmentFees = {} }) {
     { number: 1, title: 'Dados Pessoais', icon: 'fa-user' },
     { number: 2, title: 'Retirada', icon: 'fa-plane-departure' },
     { number: 3, title: 'Pagamento', icon: 'fa-credit-card' },
-  ];
-
-  const pickupLocations = [
-    { value: 'international-drive', label: 'International Drive, Orlando' },
-    { value: 'orlando-outlets', label: 'Orlando International Premium Outlets' },
-    { value: 'a-combinar', label: 'A combinar por WhatsApp após a compra' },
   ];
 
   return (
@@ -857,16 +865,26 @@ export default function CheckoutForm({ config, installmentFees = {} }) {
                     </label>
                     <select
                       name="pickupLocation"
-                      value={formData.pickupLocation}
-                      onChange={handleInputChange}
+                      value={formData.pickupLocationId || (formData.pickupLocation === 'a-combinar' ? 'a-combinar' : '')}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === 'a-combinar') {
+                          setFormData(prev => ({ ...prev, pickupLocation: 'a-combinar', pickupLocationId: '' }));
+                        } else {
+                          const loc = pickupLocations.find(l => l.id === value);
+                          setFormData(prev => ({ ...prev, pickupLocation: loc?.name || '', pickupLocationId: value }));
+                        }
+                        if (errors.pickupLocation) setErrors(prev => ({ ...prev, pickupLocation: '' }));
+                      }}
                       className={`w-full px-4 py-3 border-2 ${
                         errors.pickupLocation ? 'border-red-500' : 'border-gray-200'
                       } rounded-xl focus:outline-none transition-colors`}
                     >
                       <option value="">Selecione</option>
                       {pickupLocations.map(loc => (
-                        <option key={loc.value} value={loc.value}>{loc.label}</option>
+                        <option key={loc.id} value={loc.id}>{loc.name}</option>
                       ))}
+                      <option value="a-combinar">A combinar por WhatsApp após a compra</option>
                     </select>
                     {errors.pickupLocation && <p className="text-red-500 text-xs mt-1">{errors.pickupLocation}</p>}
                   </div>
@@ -1232,12 +1250,19 @@ export default function CheckoutForm({ config, installmentFees = {} }) {
                 <p className="text-gray-600 mb-2">
                   Seu pedido #{orderResult?.orderId} foi criado com sucesso.
                 </p>
-                <p className="text-gray-500 text-sm mb-8">
+                <p className="text-gray-500 text-sm mb-2">
                   Você receberá um email com os detalhes do pedido e as instruções para a retirada em Orlando.
                 </p>
+
+                <PickupVoucher
+                  orderNumber={orderResult?.orderNumber}
+                  pickupToken={orderResult?.pickupToken}
+                  pickupLocationLabel={formData.pickupLocation}
+                />
+
                 <button
                   onClick={() => router.push('/')}
-                  className="px-8 py-3 rounded-xl font-bold text-white transition-all hover:shadow-lg"
+                  className="mt-8 px-8 py-3 rounded-xl font-bold text-white transition-all hover:shadow-lg"
                   style={{ backgroundColor: affiliate.buttonColor || '#0043f7' }}
                 >
                   Voltar à Loja

@@ -393,6 +393,36 @@ create trigger trg_affiliate_product_commissions_updated_at
   for each row execute function set_updated_at();
 
 -- =====================================================================
+-- 11.1 pickup_locations — locais de retirada geridos pelo admin
+-- =====================================================================
+
+create table if not exists pickup_locations (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  address text,
+  city text not null default 'Orlando',
+  state text not null default 'FL',
+  zip_code text,
+  notes text,
+  is_active boolean not null default true,
+  display_order integer not null default 0,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists idx_pickup_locations_active on pickup_locations(is_active, display_order);
+
+drop trigger if exists trg_pickup_locations_updated_at on pickup_locations;
+create trigger trg_pickup_locations_updated_at
+  before update on pickup_locations
+  for each row execute function set_updated_at();
+
+insert into pickup_locations (name, display_order) values
+  ('International Drive, Orlando', 1),
+  ('Orlando International Premium Outlets', 2)
+on conflict (name) do nothing;
+
+-- =====================================================================
 -- 12. orders — pedidos (com retirada em Orlando, não entrega nacional)
 -- =====================================================================
 
@@ -406,9 +436,12 @@ create table if not exists orders (
 
   -- Retirada em Orlando (fluxo atual)
   pickup_travel_date date not null,
-  pickup_location text not null,
+  pickup_location text not null,        -- rótulo em texto (legado, mantido pra exibição)
+  pickup_location_id uuid references pickup_locations(id), -- vínculo estruturado com o local
   pickup_travel_notes text,
   pickup_terms_accepted boolean not null default false,
+  pickup_token text not null default replace(gen_random_uuid()::text, '-', ''), -- código do QR/voucher de retirada
+  delivered_by uuid references affiliate_users(id), -- quem confirmou a retirada (bipou o QR)
 
   -- Campos legados de entrega nacional (mantidos nullable por compatibilidade;
   -- não são mais preenchidos pelo checkout atual)
@@ -448,6 +481,8 @@ create index if not exists idx_orders_affiliate_id on orders(affiliate_id);
 create index if not exists idx_orders_status on orders(status);
 create index if not exists idx_orders_payment_status on orders(payment_status);
 create index if not exists idx_orders_created_at on orders(created_at desc);
+create unique index if not exists idx_orders_pickup_token on orders(pickup_token);
+create index if not exists idx_orders_pickup_location_id on orders(pickup_location_id);
 
 drop trigger if exists trg_orders_order_number on orders;
 create trigger trg_orders_order_number
@@ -884,7 +919,7 @@ begin
     'product_variants', 'product_variant_values', 'product_accessories', 'stock_movements',
     'affiliate_product_commissions', 'orders', 'order_items', 'payments',
     'coupons', 'coupon_usage', 'affiliate_sales', 'affiliate_withdrawals',
-    'platform_config', 'installment_fees'
+    'platform_config', 'installment_fees', 'pickup_locations'
   ]
   loop
     execute format('alter table %I enable row level security', t);
