@@ -85,7 +85,7 @@ export default function ClientHeader({ config }) {
   return (
     <>
       {/* CAMADA 2: Cabeçalho Principal */}
-      <div className="p-4" style={{ backgroundColor: brandColor }}>
+      <div className="px-4 py-2" style={{ backgroundColor: brandColor }}>
         <div className="container mx-auto flex items-center justify-between gap-4 flex-wrap">
           {/* Logo */}
           <div>
