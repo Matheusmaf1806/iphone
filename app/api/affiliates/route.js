@@ -20,7 +20,7 @@ export async function GET() {
 
     const { data: affiliates, error } = await supabase
       .from('affiliates')
-      .select('id, name, slug, domain, subdomain, custom_domain, commission_rate, is_active, cnpj, logo_url, created_at')
+      .select('id, name, slug, domain, subdomain, custom_domain, commission_rate, is_active, cnpj, logo_url, created_at, head_id')
       .order('name', { ascending: true });
 
     if (error) {
@@ -176,7 +176,7 @@ export async function PATCH(request) {
 
     const allowedFields = [
       'name', 'slug', 'domain', 'subdomain', 'custom_domain', 'cnpj',
-      'commission_rate', 'is_active', 'logo_url',
+      'commission_rate', 'is_active', 'logo_url', 'head_id',
       'primary_color', 'background_color', 'button_color', 'button_text_color', 'button_hover',
     ];
     const sanitized = {};
@@ -186,6 +186,20 @@ export async function PATCH(request) {
       }
     }
     sanitized.updated_at = new Date().toISOString();
+
+    // Trocar/atribuir/remover o Head da carteira: registra a data de entrada (usada
+    // como referência inicial da regra dos 90 dias sem vender, ver
+    // app/api/cron/release-inactive-heads) e loga o evento no histórico do Head.
+    let previousHeadId = null;
+    if ('head_id' in sanitized) {
+      const { data: current } = await supabase
+        .from('affiliates')
+        .select('head_id')
+        .eq('id', id)
+        .single();
+      previousHeadId = current?.head_id || null;
+      sanitized.head_joined_at = sanitized.head_id ? new Date().toISOString() : null;
+    }
 
     const { data, error } = await supabase
       .from('affiliates')
@@ -197,6 +211,23 @@ export async function PATCH(request) {
     if (error) {
       console.error('Error updating affiliate:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if ('head_id' in sanitized) {
+      if (previousHeadId && previousHeadId !== sanitized.head_id) {
+        await supabase.from('head_wallet_events').insert({
+          head_id: previousHeadId,
+          affiliate_id: id,
+          event: 'released_manual',
+        });
+      }
+      if (sanitized.head_id) {
+        await supabase.from('head_wallet_events').insert({
+          head_id: sanitized.head_id,
+          affiliate_id: id,
+          event: 'assigned',
+        });
+      }
     }
 
     return NextResponse.json({ success: true, affiliate: data });

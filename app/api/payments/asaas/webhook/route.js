@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '../../../../../lib/supabase/server';
+import { markAffiliateSale } from '../../../../../lib/heads';
 
 export async function POST(request) {
   try {
@@ -48,7 +49,7 @@ export async function POST(request) {
     }
 
     // Atualizar status do pagamento e do pedido
-    await Promise.all([
+    const [, orderUpdate] = await Promise.all([
       supabase
         .from('payments')
         .update({ status: 'completed' })
@@ -56,8 +57,11 @@ export async function POST(request) {
       supabase
         .from('orders')
         .update({ status: 'paid', payment_status: 'paid' })
-        .eq('id', paymentRecord.order_id),
+        .eq('id', paymentRecord.order_id)
+        .select('affiliate_id')
+        .single(),
     ]);
+    await markAffiliateSale(orderUpdate.data?.affiliate_id, supabase);
 
     console.log(`[Asaas Webhook] Payment ${payment.id} confirmed for order ${paymentRecord.order_id}`);
 

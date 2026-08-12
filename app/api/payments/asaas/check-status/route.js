@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '../../../../../lib/supabase/server';
+import { markAffiliateSale } from '../../../../../lib/heads';
 
 const getAsaasBaseUrl = () =>
   process.env.ASAAS_ENVIRONMENT === 'production'
@@ -47,7 +48,7 @@ export async function GET(request) {
           .single();
 
         if (payment?.order_id) {
-          await Promise.all([
+          const [, orderUpdate] = await Promise.all([
             supabase
               .from('payments')
               .update({ status: 'completed' })
@@ -55,8 +56,11 @@ export async function GET(request) {
             supabase
               .from('orders')
               .update({ status: 'paid', payment_status: 'paid' })
-              .eq('id', payment.order_id),
+              .eq('id', payment.order_id)
+              .select('affiliate_id')
+              .single(),
           ]);
+          await markAffiliateSale(orderUpdate.data?.affiliate_id, supabase);
         }
       }
     }

@@ -31,6 +31,7 @@ const INITIAL_FORM = {
 
 export default function AfiliadosManager() {
   const [affiliates, setAffiliates] = useState([]);
+  const [heads, setHeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -39,7 +40,35 @@ export default function AfiliadosManager() {
 
   useEffect(() => {
     loadAffiliates();
+    loadHeads();
   }, []);
+
+  const loadHeads = async () => {
+    try {
+      const res = await fetch('/api/heads', { credentials: 'include' });
+      const data = await res.json();
+      if (data.success) setHeads(data.heads || []);
+    } catch (err) {
+      console.error('Error fetching heads:', err);
+    }
+  };
+
+  const changeHead = async (affiliateId, headId) => {
+    try {
+      const res = await fetch('/api/affiliates', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ id: affiliateId, head_id: headId || null }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAffiliates((prev) => prev.map((a) => (a.id === affiliateId ? { ...a, head_id: headId || null } : a)));
+      }
+    } catch (err) {
+      console.error('Error changing head:', err);
+    }
+  };
 
   const loadAffiliates = async () => {
     try {
@@ -424,6 +453,7 @@ export default function AfiliadosManager() {
                   <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Slug</th>
                   <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Domínio</th>
                   <th className="px-6 py-3.5 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Comissão</th>
+                  <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Rede (Head)</th>
                   <th className="px-6 py-3.5 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
                   <th className="px-6 py-3.5 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Ações</th>
                 </tr>
@@ -454,6 +484,18 @@ export default function AfiliadosManager() {
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className="text-sm font-semibold text-gray-700">{formatCommission(aff.commission_rate)}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <select
+                        value={aff.head_id || ''}
+                        onChange={(e) => changeHead(aff.id, e.target.value)}
+                        className="text-xs border border-gray-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400 max-w-[160px]"
+                      >
+                        <option value="">Direto da iShop</option>
+                        {heads.map((h) => (
+                          <option key={h.id} value={h.id}>{h.name}</option>
+                        ))}
+                      </select>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
