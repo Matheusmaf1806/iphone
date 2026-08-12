@@ -151,6 +151,101 @@ create table if not exists affiliate_users (
 create index if not exists idx_affiliate_users_affiliate_id on affiliate_users(affiliate_id);
 
 -- =====================================================================
+-- 3.1 heads — donos de rede (camada opcional entre iShop e afiliado).
+-- Podem também vender diretamente (own_affiliate_id).
+-- =====================================================================
+
+create table if not exists heads (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  slug text unique,
+  own_affiliate_id bigint references affiliates(id),
+  commission_percentage numeric(5,2) not null default 25.00, -- % da margem da iShop
+  is_active boolean not null default true,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists idx_heads_own_affiliate on heads(own_affiliate_id);
+
+drop trigger if exists trg_heads_updated_at on heads;
+create trigger trg_heads_updated_at
+  before update on heads
+  for each row execute function set_updated_at();
+
+-- =====================================================================
+-- 3.2 head_users — login separado do Head (não é afiliado, não é gestão)
+-- =====================================================================
+
+create table if not exists head_users (
+  id uuid primary key default gen_random_uuid(),
+  head_id uuid not null references heads(id) on delete cascade,
+  username text not null unique,
+  email text,
+  password_hash text not null,
+  full_name text not null,
+  role text not null default 'owner',
+  is_active boolean not null default true,
+  last_login timestamptz,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists idx_head_users_head_id on head_users(head_id);
+
+drop trigger if exists trg_head_users_updated_at on head_users;
+create trigger trg_head_users_updated_at
+  before update on head_users
+  for each row execute function set_updated_at();
+
+-- =====================================================================
+-- 3.3 affiliates.head_id — vínculo do afiliado com a carteira de um Head
+-- (nulo = direto da iShop) + rastro de última venda, usado pra liberar da
+-- carteira automaticamente depois de 90 dias sem vender.
+-- =====================================================================
+
+alter table affiliates add column if not exists head_id uuid references heads(id);
+alter table affiliates add column if not exists head_joined_at timestamptz;
+alter table affiliates add column if not exists last_sale_at timestamptz;
+
+create index if not exists idx_affiliates_head_id on affiliates(head_id);
+
+-- =====================================================================
+-- 3.4 head_wallet_events — histórico de entrada/saída de afiliado na
+-- carteira de um Head (avisa no painel do Head quando alguém sai por
+-- inatividade)
+-- =====================================================================
+
+create table if not exists head_wallet_events (
+  id uuid primary key default gen_random_uuid(),
+  head_id uuid not null references heads(id) on delete cascade,
+  affiliate_id bigint not null references affiliates(id) on delete cascade,
+  event text not null, -- assigned | released_inactive | released_manual
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_head_wallet_events_head_id on head_wallet_events(head_id, created_at);
+
+-- =====================================================================
+-- 3.5 head_withdrawals — solicitações de saque do Head (mesmo padrão de
+-- affiliate_withdrawals, ver seção 17)
+-- =====================================================================
+
+create table if not exists head_withdrawals (
+  id uuid primary key default gen_random_uuid(),
+  head_id uuid not null references heads(id) on delete cascade,
+  amount numeric(10,2) not null,
+  pix_key text not null,
+  status text not null default 'pending', -- pending | processing | paid | cancelled
+  requested_at timestamptz not null default now(),
+  processed_at timestamptz,
+  paid_at timestamptz
+);
+
+create index if not exists idx_head_withdrawals_head_id on head_withdrawals(head_id);
+create index if not exists idx_head_withdrawals_status on head_withdrawals(status);
+
+-- =====================================================================
 -- 4. user_ecommerce — clientes finais (compradores da loja)
 -- (mantém a estrutura do supabase/create_user_ecommerce.sql original,
 -- + affiliate_id, já adicionado antes pela migration correspondente)
@@ -493,6 +588,8 @@ create table if not exists orders (
   affiliate_commission numeric(10,2) not null default 0,
   affiliate_amount numeric(10,2) not null default 0,   -- mantido em sincronia com affiliate_commission no código
   supplier_amount numeric(10,2) default 0,
+  head_id uuid references heads(id),                    -- retrato de qual Head ganhou nessa venda (nulo = sem Head)
+  head_commission_amount numeric(10,2) not null default 0,
   card_fee_amount numeric(10,2) default 0,
 
   status text not null default 'pending',         -- pending | paid | processing | shipped | delivered | cancelled
@@ -506,6 +603,7 @@ create table if not exists orders (
 );
 
 create index if not exists idx_orders_affiliate_id on orders(affiliate_id);
+create index if not exists idx_orders_head_id on orders(head_id);
 create index if not exists idx_orders_status on orders(status);
 create index if not exists idx_orders_payment_status on orders(payment_status);
 create index if not exists idx_orders_created_at on orders(created_at desc);
@@ -947,7 +1045,8 @@ begin
     'product_variants', 'product_variant_values', 'product_accessories', 'stock_movements',
     'affiliate_product_commissions', 'orders', 'order_items', 'payments',
     'coupons', 'coupon_usage', 'affiliate_sales', 'affiliate_withdrawals',
-    'platform_config', 'installment_fees', 'pickup_locations', 'store_users'
+    'platform_config', 'installment_fees', 'pickup_locations', 'store_users',
+    'heads', 'head_users', 'head_wallet_events', 'head_withdrawals'
   ]
   loop
     execute format('alter table %I enable row level security', t);

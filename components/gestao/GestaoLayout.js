@@ -27,6 +27,11 @@ export default function GestaoLayout({ children, session }) {
       path: '/gestao/erp/afiliados',
     },
     {
+      icon: 'fa-sitemap',
+      label: 'Rede de Heads',
+      path: '/gestao/erp/rede',
+    },
+    {
       icon: 'fa-tag',
       label: 'Cupons',
       path: '/gestao/erp/cupons',

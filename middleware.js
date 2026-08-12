@@ -81,6 +81,42 @@ export function middleware(request) {
     }
   }
 
+  // Proteger rotas do painel do Head (/head) — sistema de login totalmente
+  // separado do afiliado, da loja e da gestão.
+  if (pathname.startsWith('/head/adm')) {
+    const headSession = request.cookies.get('head_session');
+
+    if (!headSession) {
+      const loginUrl = new URL('/head/login', request.url);
+      loginUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    try {
+      const sessionData = JSON.parse(
+        Buffer.from(headSession.value, 'base64').toString()
+      );
+
+      const SESSION_DURATION = 60 * 60 * 24 * 30 * 1000; // 30 dias em ms
+      const sessionAge = Date.now() - sessionData.timestamp;
+
+      if (sessionAge > SESSION_DURATION) {
+        const loginUrl = new URL('/head/login', request.url);
+        loginUrl.searchParams.set('redirect', pathname);
+        const response = NextResponse.redirect(loginUrl);
+        response.cookies.delete('head_session');
+        return response;
+      }
+    } catch (error) {
+      console.error('Error parsing head session:', error);
+      const loginUrl = new URL('/head/login', request.url);
+      loginUrl.searchParams.set('redirect', pathname);
+      const response = NextResponse.redirect(loginUrl);
+      response.cookies.delete('head_session');
+      return response;
+    }
+  }
+
   return NextResponse.next();
 }
 
@@ -88,5 +124,6 @@ export const config = {
   matcher: [
     '/afiliado/adm/:path*',
     '/loja/adm/:path*',
+    '/head/adm/:path*',
   ],
 };

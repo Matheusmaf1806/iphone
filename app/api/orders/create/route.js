@@ -6,6 +6,7 @@ import { registerCouponUsage, resolveServerCouponDiscount } from '../../../../li
 import { getInstallmentFees, getFeeForInstallments } from '../../../../lib/installmentFees';
 import { updateStock, updateVariantStock } from '../../../../lib/products';
 import { getAffiliateSession } from '../../../../lib/affiliateAuth';
+import { markAffiliateSale } from '../../../../lib/heads';
 
 // Mesma faixa segura usada em lib/orderPricing.js (ver comentário lá) — mantida
 // duplicada aqui porque esta rota ainda reimplementa a cascata de preço em vez de
@@ -66,12 +67,28 @@ export async function POST(request) {
     if (affiliateId) {
       const { data: affiliateData } = await supabase
         .from('affiliates')
-        .select('id, commission_rate')
+        .select('id, commission_rate, head_id')
         .eq('id', affiliateId)
         .eq('is_active', true)
         .single();
 
       affiliate = affiliateData;
+    }
+
+    // Rede de Heads — se o afiliado pertence à carteira de um Head, o Head ganha uma
+    // fatia recorrente da margem que seria da iShop em toda venda desse afiliado. Não
+    // reavalia aqui a regra dos 90 dias sem vender: quem mantém affiliates.head_id
+    // "fresco" é o cron de liberação por inatividade (ver
+    // app/api/cron/release-inactive-heads) — se ainda está preenchido, o vínculo vale.
+    let head = null;
+    if (affiliate?.head_id) {
+      const { data: headData } = await supabase
+        .from('heads')
+        .select('id, commission_percentage')
+        .eq('id', affiliate.head_id)
+        .eq('is_active', true)
+        .single();
+      head = headData;
     }
 
     // customMarkup só é honrado quando quem está logado é de fato um agente vinculado
@@ -97,6 +114,7 @@ export async function POST(request) {
     let totalAffiliateCommission = 0;
     let totalSupplierAmount = 0;
     let totalCardFee = 0;
+    let totalHeadCommission = 0;
 
     // Buscar dados autoritativos de produtos e variantes no banco — nunca confiar em
     // preço/custo vindos do cliente (o que o browser manda em costPrice/supplierMarginPercentage
@@ -214,11 +232,15 @@ export async function POST(request) {
       const supplierAmount = (prices.netPrice - prices.costPrice) * item.quantity;
       const affiliateAmount = (prices.pixPrice - prices.netPrice) * item.quantity;
       const cardFeeAmount = isPix ? 0 : (prices.finalPrice - prices.pixPrice) * item.quantity;
+      // Rede de Heads: fatia recorrente da margem da iShop, não do afiliado — o
+      // afiliado ganha o mesmo affiliateAmount de sempre, tenha Head ou não.
+      const headAmount = head ? supplierAmount * (parseFloat(head.commission_percentage) / 100) : 0;
 
       orderSubtotal += itemTotal;
       totalSupplierAmount += supplierAmount;
       totalAffiliateCommission += affiliateAmount;
       totalCardFee += cardFeeAmount;
+      totalHeadCommission += headAmount;
 
       return {
         product_id: item.productId,
@@ -291,6 +313,8 @@ export async function POST(request) {
         affiliate_id: affiliate?.id || null,
         affiliate_commission: totalAffiliateCommission,
         affiliate_amount: totalAffiliateCommission,
+        head_id: head?.id || null,
+        head_commission_amount: totalHeadCommission,
         status: 'pending',
         payment_status: 'pending',
       })
@@ -380,6 +404,7 @@ export async function POST(request) {
           .from('orders')
           .update({ status: 'paid', payment_status: 'paid' })
           .eq('id', order.id);
+        await markAffiliateSale(affiliate?.id, supabase);
       }
     }
 
